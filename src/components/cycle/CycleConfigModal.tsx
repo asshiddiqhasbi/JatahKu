@@ -60,9 +60,9 @@ export const CycleConfigModal: React.FC<CycleConfigModalProps> = ({ isOpen, onCl
     onClose();
   };
 
-  const handleResetData = () => {
+  const handleResetData = async () => {
     if (confirm('Yakin ingin mereset dan menghapus semua data? Anda akan kembali ke layar pengaturan awal.')) {
-      resetAllData();
+      await resetAllData();
       onClose();
     }
   };

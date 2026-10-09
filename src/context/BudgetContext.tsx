@@ -20,21 +20,22 @@ import { calculateRunway, calculateCategorySummaries } from '../utils/runwayCalc
 interface BudgetContextType {
   user: User | null;
   isSyncing: boolean;
+  isInitializing: boolean;
   cycle: BudgetCycle | null;
   isOnboarded: boolean;
   transactions: Transaction[];
   metrics: RunwayMetrics;
   categorySummaries: CategorySummary[];
-  addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt' | 'cycleId'>) => void;
-  addTransactions: (txList: Array<Omit<Transaction, 'id' | 'createdAt' | 'cycleId'>>) => void;
-  updateTransaction: (id: string, updates: Partial<Transaction>) => void;
-  deleteTransaction: (id: string) => void;
-  updateCycle: (updates: Partial<BudgetCycle>) => void;
-  setupNewCycle: (newCycle: BudgetCycle) => void;
+  addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt' | 'cycleId'>) => Promise<void>;
+  addTransactions: (txList: Array<Omit<Transaction, 'id' | 'createdAt' | 'cycleId'>>) => Promise<void>;
+  updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
+  updateCycle: (updates: Partial<BudgetCycle>) => Promise<void>;
+  setupNewCycle: (newCycle: BudgetCycle) => Promise<void>;
   backupData: () => void;
   restoreData: (cycle: BudgetCycle, transactions: Transaction[]) => void;
   loadSampleData: () => void;
-  resetAllData: () => void;
+  resetAllData: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshCloudData: () => Promise<void>;
 }
@@ -74,6 +75,7 @@ const BudgetContext = createContext<BudgetContextType | undefined>(undefined);
 export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [isInitializing, setIsInitializing] = useState<boolean>(true);
 
   const [cycle, setCycle] = useState<BudgetCycle | null>(() => {
     return getStoredActiveCycle();
@@ -92,34 +94,98 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     saveTransactions(transactions);
   }, [transactions]);
 
-  // Pantau sesi login Supabase
+  // Pantau sesi login Supabase saat aplikasi dibuka
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    let isMounted = true;
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!isMounted) return;
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
-        syncFromCloud(currentUser);
+        await syncFromCloud(currentUser);
       }
+      setIsInitializing(false);
     });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!isMounted) return;
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
-        syncFromCloud(currentUser);
+        await syncFromCloud(currentUser);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
+
+  // Auto-sync saat tab aktif kembali (fokus layar / berpindah aplikasi)
+  useEffect(() => {
+    if (!user) return;
+
+    const handleSyncOnVisible = () => {
+      if (document.visibilityState === 'visible') {
+        syncFromCloud(user);
+      }
+    };
+
+    window.addEventListener('focus', handleSyncOnVisible);
+    document.addEventListener('visibilitychange', handleSyncOnVisible);
+
+    return () => {
+      window.removeEventListener('focus', handleSyncOnVisible);
+      document.removeEventListener('visibilitychange', handleSyncOnVisible);
+    };
+  }, [user]);
+
+  // Realtime multi-device sync via Supabase WebSockets
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`user-sync-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          syncFromCloud(user);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'cycles',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          syncFromCloud(user);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   // Fungsi sinkronisasi dengan Supabase
   const syncFromCloud = async (currentUser: User) => {
     setIsSyncing(true);
     try {
-      // 1. Ambil siklus anggaran
+      // 1. Ambil siklus anggaran terbaru milik pengguna
       const { data: cloudCycles, error: cycleErr } = await supabase
         .from('cycles')
         .select('*')
@@ -129,26 +195,28 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
       if (cycleErr) throw cycleErr;
 
-      // 2. Ambil transaksi
-      const { data: cloudTx, error: txErr } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .order('date', { ascending: false });
-
-      if (txErr) throw txErr;
-
       if (cloudCycles && cloudCycles.length > 0) {
+        const activeCycleRow = cloudCycles[0];
         const activeCloudCycle: BudgetCycle = {
-          id: cloudCycles[0].id,
-          userName: cloudCycles[0].user_name || '',
-          initialBalance: Number(cloudCycles[0].initial_balance),
-          startDate: cloudCycles[0].start_date,
-          endDate: cloudCycles[0].end_date,
-          emergencyBuffer: Number(cloudCycles[0].emergency_buffer || 0),
-          notes: cloudCycles[0].notes || undefined,
-          createdAt: cloudCycles[0].created_at || new Date().toISOString(),
+          id: activeCycleRow.id,
+          userName: activeCycleRow.user_name || '',
+          initialBalance: Number(activeCycleRow.initial_balance),
+          startDate: activeCycleRow.start_date,
+          endDate: activeCycleRow.end_date,
+          emergencyBuffer: Number(activeCycleRow.emergency_buffer || 0),
+          notes: activeCycleRow.notes || undefined,
+          createdAt: activeCycleRow.created_at || new Date().toISOString(),
         };
+
+        // 2. Ambil transaksi HANYA untuk siklus yang sedang aktif
+        const { data: cloudTx, error: txErr } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('user_id', currentUser.id)
+          .eq('cycle_id', activeCycleRow.id)
+          .order('date', { ascending: false });
+
+        if (txErr) throw txErr;
 
         const activeCloudTx: Transaction[] = (cloudTx || []).map((t) => ({
           id: t.id,
@@ -373,6 +441,9 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    clearAllStoredData();
+    setCycle(null);
+    setTransactions([]);
   };
 
   const refreshCloudData = async () => {
@@ -398,7 +469,14 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setTransactions(sampleTx);
   };
 
-  const resetAllData = () => {
+  const resetAllData = async () => {
+    if (user && cycle) {
+      try {
+        await supabase.from('cycles').delete().eq('id', cycle.id).eq('user_id', user.id);
+      } catch (e) {
+        console.error('Gagal menghapus siklus di Supabase:', e);
+      }
+    }
     clearAllStoredData();
     setCycle(null);
     setTransactions([]);
@@ -409,6 +487,7 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       value={{
         user,
         isSyncing,
+        isInitializing,
         cycle,
         isOnboarded,
         transactions,

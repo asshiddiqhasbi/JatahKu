@@ -14,7 +14,7 @@ import { ExportCenterModal } from './components/export/ExportCenterModal';
 import { AuthModal } from './components/auth/AuthModal';
 
 const DashboardContent: React.FC = () => {
-  const { isOnboarded } = useBudget();
+  const { isOnboarded, isInitializing } = useBudget();
 
   const [isQuickEntryOpen, setIsQuickEntryOpen] = useState(false);
   const [isCycleConfigOpen, setIsCycleConfigOpen] = useState(false);
@@ -47,6 +47,22 @@ const DashboardContent: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOnboarded, isQuickEntryOpen, isCycleConfigOpen, isExportOpen]);
+
+  // Layar loading saat inisialisasi sesi login awal agar tidak ada flash onboarding
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen bg-[#FAF8F5] dark:bg-[#191816] flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#2D6A4F] text-white flex items-center justify-center shadow-xs animate-pulse">
+            <span className="font-bold text-sm tracking-tight">JK</span>
+          </div>
+          <p className="text-xs font-medium text-stone-500 dark:text-stone-400">
+            Menyiapkan data keuangan...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // If user hasn't set up budget yet, show initial onboarding screen
   if (!isOnboarded) {
