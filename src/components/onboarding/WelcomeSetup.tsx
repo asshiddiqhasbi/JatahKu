@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
-import { Wallet, Shield, ArrowRight, Calendar, Sun, Moon } from 'lucide-react';
+import { Wallet, Shield, ArrowRight, Calendar, Sun, Moon, Cloud } from 'lucide-react';
 import { useBudget } from '../../context/BudgetContext';
 import { useTheme } from '../../context/ThemeContext';
 import { parseRawNumber, formatIDR } from '../../utils/currency';
 import { getInclusiveDays, getTodayDateString, addDaysToDate } from '../../utils/dateUtils';
 import { DEFAULT_EMERGENCY_BUFFER } from '../../constants/presets';
 
-export const WelcomeSetup: React.FC = () => {
+interface WelcomeSetupProps {
+  onOpenAuth?: () => void;
+}
+
+export const WelcomeSetup: React.FC<WelcomeSetupProps> = ({ onOpenAuth }) => {
   const { setupNewCycle, loadSampleData } = useBudget();
   const { isDark, toggleTheme } = useTheme();
 
@@ -255,6 +259,20 @@ export const WelcomeSetup: React.FC = () => {
               Atau coba isi dengan data contoh simulasi
             </button>
           </div>
+
+          {/* Cloud Sync Option for returning users */}
+          {onOpenAuth && (
+            <div className="text-center pt-2 border-t border-[#ECE7DC] dark:border-[#332F2B] mt-4">
+              <button
+                type="button"
+                onClick={onOpenAuth}
+                className="text-xs font-semibold text-[#2D6A4F] dark:text-[#42B07E] hover:underline flex items-center justify-center gap-1.5 mx-auto pt-1"
+              >
+                <Cloud className="w-3.5 h-3.5" />
+                <span>Sudah punya akun? Masuk untuk sinkronkan data</span>
+              </button>
+            </div>
+          )}
         </form>
       </div>
 

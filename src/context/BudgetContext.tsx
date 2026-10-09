@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
+import type { User } from '@supabase/supabase-js';
 import type { BudgetCycle, RunwayMetrics } from '../types/cycle';
 import type { Transaction } from '../types/transaction';
 import type { CategorySummary } from '../types/report';
+import { supabase } from '../lib/supabase';
 import {
   getStoredActiveCycle,
   saveActiveCycle,
@@ -16,6 +18,8 @@ import {
 import { calculateRunway, calculateCategorySummaries } from '../utils/runwayCalculator';
 
 interface BudgetContextType {
+  user: User | null;
+  isSyncing: boolean;
   cycle: BudgetCycle | null;
   isOnboarded: boolean;
   transactions: Transaction[];
@@ -31,6 +35,8 @@ interface BudgetContextType {
   restoreData: (cycle: BudgetCycle, transactions: Transaction[]) => void;
   loadSampleData: () => void;
   resetAllData: () => void;
+  signOut: () => Promise<void>;
+  refreshCloudData: () => Promise<void>;
 }
 
 const emptyMetrics: RunwayMetrics = {
@@ -66,6 +72,9 @@ const emptyMetrics: RunwayMetrics = {
 const BudgetContext = createContext<BudgetContextType | undefined>(undefined);
 
 export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
   const [cycle, setCycle] = useState<BudgetCycle | null>(() => {
     return getStoredActiveCycle();
   });
@@ -74,6 +83,7 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     return getStoredTransactions();
   });
 
+  // Local storage persistence (Offline cache)
   useEffect(() => {
     saveActiveCycle(cycle);
   }, [cycle]);
@@ -81,6 +91,123 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   useEffect(() => {
     saveTransactions(transactions);
   }, [transactions]);
+
+  // Pantau sesi login Supabase
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
+        syncFromCloud(currentUser);
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
+        syncFromCloud(currentUser);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Fungsi sinkronisasi dengan Supabase
+  const syncFromCloud = async (currentUser: User) => {
+    setIsSyncing(true);
+    try {
+      // 1. Ambil siklus anggaran
+      const { data: cloudCycles, error: cycleErr } = await supabase
+        .from('cycles')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (cycleErr) throw cycleErr;
+
+      // 2. Ambil transaksi
+      const { data: cloudTx, error: txErr } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('date', { ascending: false });
+
+      if (txErr) throw txErr;
+
+      if (cloudCycles && cloudCycles.length > 0) {
+        const activeCloudCycle: BudgetCycle = {
+          id: cloudCycles[0].id,
+          userName: cloudCycles[0].user_name || '',
+          initialBalance: Number(cloudCycles[0].initial_balance),
+          startDate: cloudCycles[0].start_date,
+          endDate: cloudCycles[0].end_date,
+          emergencyBuffer: Number(cloudCycles[0].emergency_buffer || 0),
+          notes: cloudCycles[0].notes || undefined,
+          createdAt: cloudCycles[0].created_at || new Date().toISOString(),
+        };
+
+        const activeCloudTx: Transaction[] = (cloudTx || []).map((t) => ({
+          id: t.id,
+          cycleId: t.cycle_id,
+          date: t.date,
+          type: t.type as 'EXPENSE' | 'INCOME',
+          category: t.category,
+          amount: Number(t.amount),
+          qty: t.qty ? Number(t.qty) : 1,
+          unitPrice: t.unit_price ? Number(t.unit_price) : undefined,
+          source: t.source || undefined,
+          note: t.note,
+          createdAt: t.created_at,
+        }));
+
+        setCycle(activeCloudCycle);
+        setTransactions(activeCloudTx);
+      } else {
+        // Jika di cloud belum ada data tapi di lokal sudah ada data, migrasikan ke cloud
+        const localCycle = getStoredActiveCycle();
+        const localTx = getStoredTransactions();
+
+        if (localCycle) {
+          await supabase.from('cycles').insert({
+            id: localCycle.id,
+            user_id: currentUser.id,
+            user_name: localCycle.userName || null,
+            initial_balance: localCycle.initialBalance,
+            start_date: localCycle.startDate,
+            end_date: localCycle.endDate,
+            emergency_buffer: localCycle.emergencyBuffer || 0,
+            notes: localCycle.notes || null,
+          });
+
+          if (localTx.length > 0) {
+            const rowsToInsert = localTx.map((tx) => ({
+              id: tx.id,
+              user_id: currentUser.id,
+              cycle_id: localCycle.id,
+              date: tx.date,
+              type: tx.type,
+              category: tx.category,
+              amount: tx.amount,
+              qty: tx.qty || 1,
+              unit_price: tx.unitPrice || null,
+              source: tx.source || null,
+              note: tx.note,
+              created_at: tx.createdAt || new Date().toISOString(),
+            }));
+            await supabase.from('transactions').insert(rowsToInsert);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Gagal sinkronisasi data cloud:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const isOnboarded = cycle !== null;
 
@@ -94,7 +221,7 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     return calculateCategorySummaries(transactions, cycle.id);
   }, [cycle, transactions]);
 
-  const addTransaction = (data: Omit<Transaction, 'id' | 'createdAt' | 'cycleId'>) => {
+  const addTransaction = async (data: Omit<Transaction, 'id' | 'createdAt' | 'cycleId'>) => {
     if (!cycle) return;
     const newTx: Transaction = {
       ...data,
@@ -103,9 +230,30 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       createdAt: new Date().toISOString(),
     };
     setTransactions((prev) => [newTx, ...prev]);
+
+    if (user) {
+      try {
+        await supabase.from('transactions').insert({
+          id: newTx.id,
+          user_id: user.id,
+          cycle_id: cycle.id,
+          date: newTx.date,
+          type: newTx.type,
+          category: newTx.category,
+          amount: newTx.amount,
+          qty: newTx.qty || 1,
+          unit_price: newTx.unitPrice || null,
+          source: newTx.source || null,
+          note: newTx.note,
+          created_at: newTx.createdAt,
+        });
+      } catch (e) {
+        console.error('Gagal simpan transaksi ke Supabase:', e);
+      }
+    }
   };
 
-  const addTransactions = (txList: Array<Omit<Transaction, 'id' | 'createdAt' | 'cycleId'>>) => {
+  const addTransactions = async (txList: Array<Omit<Transaction, 'id' | 'createdAt' | 'cycleId'>>) => {
     if (!cycle || txList.length === 0) return;
     const nowIso = new Date().toISOString();
     const newItems: Transaction[] = txList.map((data, index) => ({
@@ -115,26 +263,122 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       createdAt: nowIso,
     }));
     setTransactions((prev) => [...newItems, ...prev]);
+
+    if (user) {
+      try {
+        const rows = newItems.map((tx) => ({
+          id: tx.id,
+          user_id: user.id,
+          cycle_id: cycle.id,
+          date: tx.date,
+          type: tx.type,
+          category: tx.category,
+          amount: tx.amount,
+          qty: tx.qty || 1,
+          unit_price: tx.unitPrice || null,
+          source: tx.source || null,
+          note: tx.note,
+          created_at: tx.createdAt,
+        }));
+        await supabase.from('transactions').insert(rows);
+      } catch (e) {
+        console.error('Gagal simpan transaksi massal ke Supabase:', e);
+      }
+    }
   };
 
-  const updateTransaction = (id: string, updates: Partial<Transaction>) => {
+  const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
     setTransactions((prev) =>
       prev.map((tx) => (tx.id === id ? { ...tx, ...updates } : tx))
     );
+
+    if (user) {
+      try {
+        const payload: Record<string, unknown> = {};
+        if (updates.note !== undefined) payload.note = updates.note;
+        if (updates.amount !== undefined) payload.amount = updates.amount;
+        if (updates.category !== undefined) payload.category = updates.category;
+        if (updates.date !== undefined) payload.date = updates.date;
+        if (updates.qty !== undefined) payload.qty = updates.qty;
+        if (updates.unitPrice !== undefined) payload.unit_price = updates.unitPrice;
+        if (updates.source !== undefined) payload.source = updates.source;
+
+        await supabase.from('transactions').update(payload).eq('id', id).eq('user_id', user.id);
+      } catch (e) {
+        console.error('Gagal memperbarui transaksi di Supabase:', e);
+      }
+    }
   };
 
-  const deleteTransaction = (id: string) => {
+  const deleteTransaction = async (id: string) => {
     setTransactions((prev) => prev.filter((tx) => tx.id !== id));
+
+    if (user) {
+      try {
+        await supabase.from('transactions').delete().eq('id', id).eq('user_id', user.id);
+      } catch (e) {
+        console.error('Gagal menghapus transaksi di Supabase:', e);
+      }
+    }
   };
 
-  const updateCycle = (updates: Partial<BudgetCycle>) => {
+  const updateCycle = async (updates: Partial<BudgetCycle>) => {
     if (!cycle) return;
-    setCycle({ ...cycle, ...updates });
+    const updated = { ...cycle, ...updates };
+    setCycle(updated);
+
+    if (user) {
+      try {
+        await supabase
+          .from('cycles')
+          .update({
+            user_name: updated.userName || null,
+            initial_balance: updated.initialBalance,
+            start_date: updated.startDate,
+            end_date: updated.endDate,
+            emergency_buffer: updated.emergencyBuffer || 0,
+            notes: updated.notes || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', updated.id)
+          .eq('user_id', user.id);
+      } catch (e) {
+        console.error('Gagal memperbarui siklus di Supabase:', e);
+      }
+    }
   };
 
-  const setupNewCycle = (newCycle: BudgetCycle) => {
+  const setupNewCycle = async (newCycle: BudgetCycle) => {
     setCycle(newCycle);
-    setTransactions([]); // Clean start: 0 expenses!
+    setTransactions([]);
+
+    if (user) {
+      try {
+        await supabase.from('cycles').insert({
+          id: newCycle.id,
+          user_id: user.id,
+          user_name: newCycle.userName || null,
+          initial_balance: newCycle.initialBalance,
+          start_date: newCycle.startDate,
+          end_date: newCycle.endDate,
+          emergency_buffer: newCycle.emergencyBuffer || 0,
+          notes: newCycle.notes || null,
+        });
+      } catch (e) {
+        console.error('Gagal simpan siklus baru ke Supabase:', e);
+      }
+    }
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+  };
+
+  const refreshCloudData = async () => {
+    if (user) {
+      await syncFromCloud(user);
+    }
   };
 
   const backupData = () => {
@@ -163,6 +407,8 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   return (
     <BudgetContext.Provider
       value={{
+        user,
+        isSyncing,
         cycle,
         isOnboarded,
         transactions,
@@ -178,6 +424,8 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         restoreData,
         loadSampleData,
         resetAllData,
+        signOut,
+        refreshCloudData,
       }}
     >
       {children}

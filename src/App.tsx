@@ -11,6 +11,7 @@ import { TransactionLedger } from './components/transaction/TransactionLedger';
 import { QuickEntryModal } from './components/transaction/QuickEntryModal';
 import { CycleConfigModal } from './components/cycle/CycleConfigModal';
 import { ExportCenterModal } from './components/export/ExportCenterModal';
+import { AuthModal } from './components/auth/AuthModal';
 
 const DashboardContent: React.FC = () => {
   const { isOnboarded } = useBudget();
@@ -18,6 +19,7 @@ const DashboardContent: React.FC = () => {
   const [isQuickEntryOpen, setIsQuickEntryOpen] = useState(false);
   const [isCycleConfigOpen, setIsCycleConfigOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Global keyboard shortcut 'N' for new transaction when onboarded
   useEffect(() => {
@@ -48,7 +50,15 @@ const DashboardContent: React.FC = () => {
 
   // If user hasn't set up budget yet, show initial onboarding screen
   if (!isOnboarded) {
-    return <WelcomeSetup />;
+    return (
+      <>
+        <WelcomeSetup onOpenAuth={() => setIsAuthModalOpen(true)} />
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+        />
+      </>
+    );
   }
 
   return (
@@ -58,6 +68,7 @@ const DashboardContent: React.FC = () => {
         onOpenQuickEntry={() => setIsQuickEntryOpen(true)}
         onOpenCycleConfig={() => setIsCycleConfigOpen(true)}
         onOpenExport={() => setIsExportOpen(true)}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -119,6 +130,10 @@ const DashboardContent: React.FC = () => {
       <ExportCenterModal
         isOpen={isExportOpen}
         onClose={() => setIsExportOpen(false)}
+      />
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
       />
     </div>
   );
