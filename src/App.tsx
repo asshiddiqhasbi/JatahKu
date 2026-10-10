@@ -78,7 +78,7 @@ const DashboardContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] dark:bg-[#191816] text-stone-900 dark:text-[#F2EFE9] flex flex-col font-sans selection:bg-amber-100 dark:selection:bg-[#3D3833] selection:text-amber-950 dark:selection:text-[#F2EFE9] transition-colors">
+    <div className="min-h-screen bg-[#FAF8F5] dark:bg-[#191816] text-stone-900 dark:text-[#F2EFE9] flex flex-col font-sans selection:bg-amber-100 dark:selection:bg-[#3D3833] selection:text-amber-950 dark:selection:text-[#F2EFE9] transition-colors w-full max-w-full overflow-x-hidden">
       {/* Navbar */}
       <Navbar
         onOpenQuickEntry={() => setIsQuickEntryOpen(true)}
@@ -91,24 +91,24 @@ const DashboardContent: React.FC = () => {
       {isDemo && (
         <aside
           aria-label="Informasi Sandbox Demo"
-          className="bg-[#F4F1EA] dark:bg-[#1E1C19] border-b border-[#E7E3DA] dark:border-[#332F2B] text-stone-700 dark:text-stone-300 px-4 py-2 text-xs transition-colors"
+          className="bg-[#F4F1EA] dark:bg-[#1E1C19] border-b border-[#E7E3DA] dark:border-[#332F2B] text-stone-700 dark:text-stone-300 px-3 sm:px-4 py-2 text-xs transition-colors overflow-hidden"
         >
-          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2">
+          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-2.5">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider bg-white dark:bg-[#2B2824] text-stone-800 dark:text-stone-200 border border-[#E7E3DA] dark:border-[#38342F] shadow-2xs shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span>Sandbox Demo</span>
               </span>
               <span className="text-[11px] text-stone-600 dark:text-stone-400">
-                Ruang simulasi bebas. Masuk akun jika ingin data tersimpan permanen dan tersinkron ke HP.
+                Simulasi bebas. Masuk akun jika ingin data tersimpan permanen ke HP.
               </span>
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
               <button
                 type="button"
                 onClick={loadSampleData}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white bg-white dark:bg-[#282622] hover:bg-[#EDE9DE] dark:hover:bg-[#332F2B] border border-[#E7E3DA] dark:border-[#332F2B] shadow-2xs transition-colors"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white bg-white dark:bg-[#282622] hover:bg-[#EDE9DE] dark:hover:bg-[#332F2B] border border-[#E7E3DA] dark:border-[#332F2B] shadow-2xs transition-colors"
                 title="Kembalikan data ke contoh simulasi awal"
               >
                 <RotateCcw className="w-3 h-3 text-stone-400" />
@@ -117,9 +117,9 @@ const DashboardContent: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsAuthModalOpen(true)}
-                className="px-3 py-1 rounded-lg bg-[#2D6A4F] hover:bg-[#23563F] active:scale-98 text-white font-semibold text-[11px] shadow-xs transition-all shrink-0"
+                className="flex-1 sm:flex-initial px-3 py-1.5 rounded-lg bg-[#2D6A4F] hover:bg-[#23563F] active:scale-98 text-white font-semibold text-[11px] shadow-xs transition-all text-center"
               >
-                Simpan ke Akun & Sinkronkan
+                Simpan ke Akun
               </button>
             </div>
           </div>

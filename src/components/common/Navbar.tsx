@@ -49,10 +49,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="sticky top-0 z-30 w-full border-b border-[#E7E3DA] dark:border-[#332F2B] bg-[#FAF8F5]/90 dark:bg-[#191816]/90 backdrop-blur-md transition-colors">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 h-15 flex items-center justify-between gap-3">
+      <div className="max-w-5xl mx-auto px-3 sm:px-6 h-14 sm:h-15 flex items-center justify-between gap-2 sm:gap-3">
         {/* Brand */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             <div className="w-8 h-8 rounded-xl bg-[#2D6A4F] text-white flex items-center justify-center shadow-xs">
               <Wallet className="w-4 h-4" />
             </div>
@@ -90,13 +90,13 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Cloud Sync / Account Button */}
           {user ? (
             <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="flex items-center gap-1.5 px-2.5 py-2 text-xs font-medium text-stone-700 dark:text-stone-300 bg-emerald-50/70 dark:bg-emerald-950/30 hover:bg-emerald-100/70 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800/60 rounded-xl transition-colors shadow-2xs"
+                className="flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-2 text-xs font-medium text-stone-700 dark:text-stone-300 bg-emerald-50/70 dark:bg-emerald-950/30 hover:bg-emerald-100/70 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800/60 rounded-xl transition-colors shadow-2xs"
                 title={user.email || 'Akun Tersinkron'}
               >
                 {isSyncing ? (
@@ -104,10 +104,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 ) : (
                   <CloudCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 )}
-                <span className="max-w-[90px] truncate hidden md:inline text-emerald-800 dark:text-emerald-300 font-semibold">
+                <span className="max-w-[80px] truncate hidden md:inline text-emerald-800 dark:text-emerald-300 font-semibold">
                   {user.email?.split('@')[0]}
                 </span>
-                <ChevronDown className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                <ChevronDown className="w-3 h-3 text-emerald-600 dark:text-emerald-400 hidden sm:block" />
               </button>
 
               {/* Account Dropdown */}
@@ -139,11 +139,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           ) : (
             <button
               onClick={onOpenAuth}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-stone-700 dark:text-stone-300 bg-white dark:bg-[#23211E] hover:bg-[#F6F3EC] dark:hover:bg-[#2C2925] border border-[#E7E3DA] dark:border-[#332F2B] rounded-xl transition-colors shadow-2xs"
+              className="flex items-center gap-1.5 p-2 sm:px-3 sm:py-2 text-xs font-semibold text-stone-700 dark:text-stone-300 bg-white dark:bg-[#23211E] hover:bg-[#F6F3EC] dark:hover:bg-[#2C2925] border border-[#E7E3DA] dark:border-[#332F2B] rounded-xl transition-colors shadow-2xs"
               title="Masuk atau Buat Akun untuk menyimpan catatan dan sinkronkan ke HP"
             >
               <Cloud className="w-3.5 h-3.5 text-stone-400" />
-              <span className="hidden sm:inline">Masuk / Simpan</span>
+              <span className="hidden sm:inline">Masuk</span>
             </button>
           )}
 
@@ -169,17 +169,17 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Export Center */}
           <button
             onClick={onOpenExport}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-stone-700 dark:text-stone-300 bg-white dark:bg-[#23211E] hover:bg-[#F6F3EC] dark:hover:bg-[#2C2925] border border-[#E7E3DA] dark:border-[#332F2B] rounded-xl transition-colors shadow-2xs"
+            className="flex items-center gap-1.5 p-2 sm:px-3 sm:py-2 text-xs font-semibold text-stone-700 dark:text-stone-300 bg-white dark:bg-[#23211E] hover:bg-[#F6F3EC] dark:hover:bg-[#2C2925] border border-[#E7E3DA] dark:border-[#332F2B] rounded-xl transition-colors shadow-2xs"
+            title="Laporan Pertanggungjawaban Resmi"
           >
             <Download className="w-3.5 h-3.5 text-stone-500 dark:text-stone-400" />
             <span className="hidden sm:inline">Laporan Resmi</span>
-            <span className="sm:hidden">Laporan</span>
           </button>
 
-          {/* Quick Add Button */}
+          {/* Quick Add Button (Desktop only; on mobile we have the Floating Action Button FAB!) */}
           <button
             onClick={onOpenQuickEntry}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#2D6A4F] hover:bg-[#23563F] active:scale-98 rounded-xl shadow-xs transition-all"
+            className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#2D6A4F] hover:bg-[#23563F] active:scale-98 rounded-xl shadow-xs transition-all"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             <span>Catat Transaksi</span>
