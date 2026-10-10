@@ -57,9 +57,16 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Wallet className="w-4 h-4" />
             </div>
             <div>
-              <span className="font-bold text-base tracking-tight text-stone-900 dark:text-[#F2EFE9] block leading-tight">
-                JatahKu
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-base tracking-tight text-stone-900 dark:text-[#F2EFE9] block leading-tight">
+                  JatahKu
+                </span>
+                {!user && (
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
+                    Demo
+                  </span>
+                )}
+              </div>
               <span className="text-[10px] text-stone-500 dark:text-stone-400 font-medium hidden sm:block">
                 Pengatur Uang Saku Harian
               </span>
@@ -132,10 +139,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={onOpenAuth}
               className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-stone-700 dark:text-stone-300 bg-white dark:bg-[#23211E] hover:bg-[#F6F3EC] dark:hover:bg-[#2C2925] border border-[#E7E3DA] dark:border-[#332F2B] rounded-xl transition-colors shadow-2xs"
-              title="Masuk atau Buat Akun untuk sinkronisasi antar perangkat"
+              title="Masuk atau Buat Akun untuk menyimpan catatan dan sinkronkan ke HP"
             >
               <Cloud className="w-3.5 h-3.5 text-stone-400" />
-              <span className="hidden sm:inline">Masuk / Sinkron</span>
+              <span className="hidden sm:inline">Masuk / Simpan</span>
             </button>
           )}
 

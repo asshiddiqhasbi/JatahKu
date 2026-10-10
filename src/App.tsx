@@ -14,7 +14,7 @@ import { ExportCenterModal } from './components/export/ExportCenterModal';
 import { AuthModal } from './components/auth/AuthModal';
 
 const DashboardContent: React.FC = () => {
-  const { isOnboarded, isInitializing } = useBudget();
+  const { isOnboarded, isInitializing, isDemo } = useBudget();
 
   const [isQuickEntryOpen, setIsQuickEntryOpen] = useState(false);
   const [isCycleConfigOpen, setIsCycleConfigOpen] = useState(false);
@@ -86,6 +86,29 @@ const DashboardContent: React.FC = () => {
         onOpenExport={() => setIsExportOpen(true)}
         onOpenAuth={() => setIsAuthModalOpen(true)}
       />
+
+      {/* Demo Mode Notice Banner */}
+      {isDemo && (
+        <aside
+          aria-label="Informasi Mode Demo"
+          className="bg-amber-500/10 dark:bg-amber-500/15 border-b border-amber-300/60 dark:border-amber-800/60 text-amber-900 dark:text-amber-200 px-4 py-2.5 text-xs transition-colors"
+        >
+          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
+              <span className="leading-snug">
+                <strong>Mode Demo & Simulasi:</strong> Data bersifat sementara dan belum tersimpan permanen.
+              </span>
+            </div>
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              className="px-3 py-1 rounded-lg bg-[#2D6A4F] hover:bg-[#23563F] active:scale-98 text-white font-semibold text-[11px] shadow-xs transition-all shrink-0"
+            >
+              Simpan & Sinkronkan ke HP
+            </button>
+          </div>
+        </aside>
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">

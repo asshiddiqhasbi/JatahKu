@@ -19,6 +19,7 @@ import { calculateRunway, calculateCategorySummaries } from '../utils/runwayCalc
 
 interface BudgetContextType {
   user: User | null;
+  isDemo: boolean;
   isSyncing: boolean;
   isInitializing: boolean;
   cycle: BudgetCycle | null;
@@ -33,7 +34,7 @@ interface BudgetContextType {
   updateCycle: (updates: Partial<BudgetCycle>) => Promise<void>;
   setupNewCycle: (newCycle: BudgetCycle) => Promise<void>;
   backupData: () => void;
-  restoreData: (cycle: BudgetCycle, transactions: Transaction[]) => void;
+  restoreData: (cycle: BudgetCycle, transactions: Transaction[]) => Promise<void> | void;
   loadSampleData: () => void;
   resetAllData: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -77,22 +78,34 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
 
+  // Jika belum ada data lokal, muat data simulasi contoh untuk mode demo
   const [cycle, setCycle] = useState<BudgetCycle | null>(() => {
-    return getStoredActiveCycle();
+    const stored = getStoredActiveCycle();
+    if (stored) return stored;
+    return createSampleCycle();
   });
 
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    return getStoredTransactions();
+    const stored = getStoredTransactions();
+    if (stored && stored.length > 0) return stored;
+    const initialCycle = getStoredActiveCycle() || createSampleCycle();
+    return createSampleTransactions(initialCycle.id);
   });
 
-  // Local storage persistence (Offline cache)
+  const isDemo = user === null;
+
+  // Local storage persistence: hanya disimpan jika user sudah login (sebagai offline cache)
   useEffect(() => {
-    saveActiveCycle(cycle);
-  }, [cycle]);
+    if (user) {
+      saveActiveCycle(cycle);
+    }
+  }, [cycle, user]);
 
   useEffect(() => {
-    saveTransactions(transactions);
-  }, [transactions]);
+    if (user) {
+      saveTransactions(transactions);
+    }
+  }, [transactions, user]);
 
   // Pantau sesi login Supabase saat aplikasi dibuka
   useEffect(() => {
@@ -442,8 +455,10 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     await supabase.auth.signOut();
     setUser(null);
     clearAllStoredData();
-    setCycle(null);
-    setTransactions([]);
+    // Kembalikan ke mode demo simulasi
+    const sample = createSampleCycle();
+    setCycle(sample);
+    setTransactions(createSampleTransactions(sample.id));
   };
 
   const refreshCloudData = async () => {
@@ -457,9 +472,45 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     exportDataAsJSON(cycle, transactions);
   };
 
-  const restoreData = (newCycle: BudgetCycle, newTransactions: Transaction[]) => {
+  const restoreData = async (newCycle: BudgetCycle, newTransactions: Transaction[]) => {
     setCycle(newCycle);
     setTransactions(newTransactions);
+
+    // Jika sedang login, simpan langsung hasil restore ke database Supabase
+    if (user) {
+      try {
+        await supabase.from('cycles').upsert({
+          id: newCycle.id,
+          user_id: user.id,
+          user_name: newCycle.userName || null,
+          initial_balance: newCycle.initialBalance,
+          start_date: newCycle.startDate,
+          end_date: newCycle.endDate,
+          emergency_buffer: newCycle.emergencyBuffer || 0,
+          notes: newCycle.notes || null,
+        });
+
+        if (newTransactions.length > 0) {
+          const rows = newTransactions.map((tx) => ({
+            id: tx.id,
+            user_id: user.id,
+            cycle_id: newCycle.id,
+            date: tx.date,
+            type: tx.type,
+            category: tx.category,
+            amount: tx.amount,
+            qty: tx.qty || 1,
+            unit_price: tx.unitPrice || null,
+            source: tx.source || null,
+            note: tx.note,
+            created_at: tx.createdAt || new Date().toISOString(),
+          }));
+          await supabase.from('transactions').upsert(rows);
+        }
+      } catch (e) {
+        console.error('Gagal mengunggah data restore ke Supabase:', e);
+      }
+    }
   };
 
   const loadSampleData = () => {
@@ -478,14 +529,22 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       }
     }
     clearAllStoredData();
-    setCycle(null);
-    setTransactions([]);
+    // Kembalikan ke mode demo simulasi jika belum login
+    if (!user) {
+      const sample = createSampleCycle();
+      setCycle(sample);
+      setTransactions(createSampleTransactions(sample.id));
+    } else {
+      setCycle(null);
+      setTransactions([]);
+    }
   };
 
   return (
     <BudgetContext.Provider
       value={{
         user,
+        isDemo,
         isSyncing,
         isInitializing,
         cycle,
