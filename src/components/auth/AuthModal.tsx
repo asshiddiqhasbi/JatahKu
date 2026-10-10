@@ -79,6 +79,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
         } else {
           setSuccessMsg('Pendaftaran berhasil! Silakan periksa email kamu untuk konfirmasi, lalu masuk.');
           setIsRegister(false);
+          setPassword('');
+          setConfirmPassword('');
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -102,6 +104,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
         setErrorMsg('Email ini sudah terdaftar. Silakan pindah ke tab Masuk Akun.');
       } else if (message.includes('Password should be at least')) {
         setErrorMsg('Kata sandi minimal harus 6 karakter.');
+      } else if (message.includes('Email not confirmed')) {
+        setErrorMsg('Email belum dikonfirmasi. Silakan periksa email kamu, atau matikan "Confirm email" di dashboard Supabase.');
+      } else if (message.includes('rate limit')) {
+        setErrorMsg('Batas kirim email Supabase tercapai. Silakan matikan "Confirm email" di dashboard Supabase agar pendaftaran langsung aktif tanpa verifikasi.');
       } else {
         setErrorMsg(message);
       }
@@ -112,6 +118,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
 
   const handleSwitchMode = (registerMode: boolean) => {
     setIsRegister(registerMode);
+    setPassword('');
+    setConfirmPassword('');
     setErrorMsg(null);
     setSuccessMsg(null);
   };
