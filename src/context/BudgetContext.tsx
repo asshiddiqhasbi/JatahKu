@@ -212,7 +212,10 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         const activeCycleRow = cloudCycles[0];
         const activeCloudCycle: BudgetCycle = {
           id: activeCycleRow.id,
-          userName: activeCycleRow.user_name || '',
+          userName:
+            activeCycleRow.user_name ||
+            (currentUser.user_metadata?.full_name as string) ||
+            '',
           initialBalance: Number(activeCycleRow.initial_balance),
           startDate: activeCycleRow.start_date,
           endDate: activeCycleRow.end_date,
@@ -256,7 +259,10 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           await supabase.from('cycles').insert({
             id: localCycle.id,
             user_id: currentUser.id,
-            user_name: localCycle.userName || null,
+            user_name:
+              localCycle.userName ||
+              (currentUser.user_metadata?.full_name as string) ||
+              null,
             initial_balance: localCycle.initialBalance,
             start_date: localCycle.startDate,
             end_date: localCycle.endDate,

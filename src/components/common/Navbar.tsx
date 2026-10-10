@@ -62,8 +62,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                   JatahKu
                 </span>
                 {!user && (
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
-                    Demo
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium uppercase tracking-wider bg-stone-100 dark:bg-[#252320] text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-stone-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                    <span>Demo</span>
                   </span>
                 )}
               </div>

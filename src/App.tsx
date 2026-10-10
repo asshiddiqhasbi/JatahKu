@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, RotateCcw } from 'lucide-react';
 import { BudgetProvider, useBudget } from './context/BudgetContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { Navbar } from './components/common/Navbar';
@@ -14,7 +14,7 @@ import { ExportCenterModal } from './components/export/ExportCenterModal';
 import { AuthModal } from './components/auth/AuthModal';
 
 const DashboardContent: React.FC = () => {
-  const { isOnboarded, isInitializing, isDemo } = useBudget();
+  const { isOnboarded, isInitializing, isDemo, loadSampleData } = useBudget();
 
   const [isQuickEntryOpen, setIsQuickEntryOpen] = useState(false);
   const [isCycleConfigOpen, setIsCycleConfigOpen] = useState(false);
@@ -87,25 +87,41 @@ const DashboardContent: React.FC = () => {
         onOpenAuth={() => setIsAuthModalOpen(true)}
       />
 
-      {/* Demo Mode Notice Banner */}
+      {/* Sandbox Preview Utility Bar */}
       {isDemo && (
         <aside
-          aria-label="Informasi Mode Demo"
-          className="bg-amber-500/10 dark:bg-amber-500/15 border-b border-amber-300/60 dark:border-amber-800/60 text-amber-900 dark:text-amber-200 px-4 py-2.5 text-xs transition-colors"
+          aria-label="Informasi Sandbox Demo"
+          className="bg-[#F4F1EA] dark:bg-[#1E1C19] border-b border-[#E7E3DA] dark:border-[#332F2B] text-stone-700 dark:text-stone-300 px-4 py-2 text-xs transition-colors"
         >
-          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
+          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
-              <span className="leading-snug">
-                <strong>Mode Demo & Simulasi:</strong> Data bersifat sementara dan belum tersimpan permanen.
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider bg-white dark:bg-[#2B2824] text-stone-800 dark:text-stone-200 border border-[#E7E3DA] dark:border-[#38342F] shadow-2xs shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Sandbox Demo</span>
+              </span>
+              <span className="text-[11px] text-stone-600 dark:text-stone-400">
+                Ruang simulasi bebas. Masuk akun jika ingin data tersimpan permanen dan tersinkron ke HP.
               </span>
             </div>
-            <button
-              onClick={() => setIsAuthModalOpen(true)}
-              className="px-3 py-1 rounded-lg bg-[#2D6A4F] hover:bg-[#23563F] active:scale-98 text-white font-semibold text-[11px] shadow-xs transition-all shrink-0"
-            >
-              Simpan & Sinkronkan ke HP
-            </button>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <button
+                type="button"
+                onClick={loadSampleData}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white bg-white dark:bg-[#282622] hover:bg-[#EDE9DE] dark:hover:bg-[#332F2B] border border-[#E7E3DA] dark:border-[#332F2B] shadow-2xs transition-colors"
+                title="Kembalikan data ke contoh simulasi awal"
+              >
+                <RotateCcw className="w-3 h-3 text-stone-400" />
+                <span>Reset Contoh</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsAuthModalOpen(true)}
+                className="px-3 py-1 rounded-lg bg-[#2D6A4F] hover:bg-[#23563F] active:scale-98 text-white font-semibold text-[11px] shadow-xs transition-all shrink-0"
+              >
+                Simpan ke Akun & Sinkronkan
+              </button>
+            </div>
           </div>
         </aside>
       )}
