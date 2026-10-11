@@ -363,7 +363,7 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
         {activeTab === 'SINGLE' && (
           <form onSubmit={handleSubmitSingle} className="space-y-4">
             {/* Transaction Type Segmented Toggle */}
-            <div className="grid grid-cols-2 p-1 bg-[#F4F1EA] dark:bg-[#1C1A18] rounded-xl">
+            <div className="grid grid-cols-2 p-1 bg-[#F4F1EA] dark:bg-[#1C1A18] rounded-xl border border-[#EDE9E1] dark:border-[#2C2925]">
               <button
                 type="button"
                 onClick={() => {
@@ -371,14 +371,14 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                   setSingleUnitPriceStr('');
                   setSingleQtyStr('1');
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg transition-all ${
+                className={`inline-flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold rounded-lg whitespace-nowrap transition-all ${
                   singleType === 'EXPENSE'
-                    ? 'bg-white dark:bg-[#282622] text-rose-600 dark:text-rose-400 shadow-2xs'
+                    ? 'bg-white dark:bg-[#282622] text-rose-600 dark:text-rose-400 shadow-2xs font-bold'
                     : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
                 }`}
               >
-                <ArrowDownRight className="w-4 h-4" />
-                Pengeluaran
+                <ArrowDownRight className="w-3.5 h-3.5 shrink-0" />
+                <span>Pengeluaran</span>
               </button>
               <button
                 type="button"
@@ -387,14 +387,14 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                   setSingleUnitPriceStr('');
                   setSingleQtyStr('1');
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg transition-all ${
+                className={`inline-flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold rounded-lg whitespace-nowrap transition-all ${
                   singleType === 'INCOME'
-                    ? 'bg-white dark:bg-[#282622] text-[#2D6A4F] dark:text-[#42B07E] shadow-2xs'
+                    ? 'bg-white dark:bg-[#282622] text-[#2D6A4F] dark:text-[#42B07E] shadow-2xs font-bold'
                     : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
                 }`}
               >
-                <ArrowUpRight className="w-4 h-4" />
-                Pemasukan Tambahan
+                <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />
+                <span>Pemasukan</span>
               </button>
             </div>
 
@@ -404,7 +404,7 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                 {/* Income Amount Input (Full width, no Qty!) */}
                 <div>
                   <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
-                    Nominal Pemasukan Tambahan
+                    Nominal Pemasukan
                   </label>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-[#2D6A4F] dark:text-[#42B07E] font-bold text-lg">
