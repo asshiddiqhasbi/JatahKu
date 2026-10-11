@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Trash2,
   Edit2,
-  Check,
-  X,
   ArrowUpRight,
 } from 'lucide-react';
 import type { Transaction } from '../../types/transaction';
@@ -13,83 +11,38 @@ import { getCategoryMeta } from '../../constants/categories';
 interface TransactionItemProps {
   transaction: Transaction;
   onDelete: (id: string) => void;
-  onUpdate: (id: string, updates: Partial<Transaction>) => void;
+  onEdit: (transaction: Transaction) => void;
 }
 
 export const TransactionItem: React.FC<TransactionItemProps> = ({
   transaction,
   onDelete,
-  onUpdate,
+  onEdit,
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editAmount, setEditAmount] = useState(transaction.amount.toString());
-  const [editNote, setEditNote] = useState(transaction.note);
-
   const isExpense = transaction.type === 'EXPENSE';
   const meta = isExpense ? getCategoryMeta(transaction.category) : null;
   const CategoryIcon = meta?.icon;
 
-  const handleSaveEdit = () => {
-    const parsed = parseInt(editAmount.replace(/[^\d]/g, ''), 10);
-    if (parsed > 0) {
-      onUpdate(transaction.id, {
-        amount: parsed,
-        note: editNote.trim(),
-      });
-      setIsEditing(false);
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const confirmed = window.confirm(
+      `Yakin ingin menghapus transaksi "${transaction.note || transaction.category}" senilai ${formatIDR(transaction.amount)}?`
+    );
+    if (confirmed) {
+      onDelete(transaction.id);
     }
   };
 
-  const handleCancelEdit = () => {
-    setEditAmount(transaction.amount.toString());
-    setEditNote(transaction.note);
-    setIsEditing(false);
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEdit(transaction);
   };
 
-  if (isEditing) {
-    return (
-      <div className="p-3 bg-[#FAF8F5] dark:bg-[#1C1A18] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-        <div className="flex-1 flex gap-2">
-          <input
-            type="text"
-            value={editNote}
-            onChange={(e) => setEditNote(e.target.value)}
-            placeholder="Keterangan..."
-            className="flex-1 px-3 py-1.5 text-xs bg-white dark:bg-[#23211E] border border-[#E7E3DA] dark:border-[#38342F] rounded-lg text-stone-900 dark:text-[#F2EFE9] focus:outline-none focus:border-[#2D6A4F]"
-          />
-          <input
-            type="text"
-            inputMode="numeric"
-            value={editAmount}
-            onChange={(e) => setEditAmount(e.target.value.replace(/[^\d]/g, ''))}
-            placeholder="Nominal"
-            className="w-28 px-3 py-1.5 text-xs font-mono font-bold bg-white dark:bg-[#23211E] border border-[#E7E3DA] dark:border-[#38342F] rounded-lg text-stone-900 dark:text-[#F2EFE9] focus:outline-none focus:border-[#2D6A4F]"
-          />
-        </div>
-        <div className="flex items-center justify-end gap-1.5">
-          <button
-            onClick={handleSaveEdit}
-            className="p-1.5 rounded-lg bg-[#2D6A4F] text-white hover:bg-[#23563F]"
-            title="Simpan"
-            aria-label="Simpan perubahan"
-          >
-            <Check className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={handleCancelEdit}
-            className="p-1.5 rounded-lg bg-[#EDE9E1] dark:bg-[#2C2925] text-stone-600 dark:text-stone-300 hover:bg-[#E3DFD5] dark:hover:bg-[#38342F]"
-            title="Batal"
-            aria-label="Batal edit"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="group flex items-center justify-between p-3 rounded-xl hover:bg-[#FAF8F5] dark:hover:bg-[#1C1A18] transition-all">
+    <div
+      onClick={() => onEdit(transaction)}
+      className="group flex items-center justify-between p-3 rounded-xl hover:bg-[#FAF8F5] dark:hover:bg-[#1C1A18] active:bg-[#F2EFE9] dark:active:bg-[#25221F] cursor-pointer transition-all"
+    >
       {/* Left: Icon, note, category badge / source */}
       <div className="flex items-center gap-3 min-w-0 pr-2">
         <div
@@ -152,17 +105,17 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
         {/* Action buttons: subtly visible on mobile touch screens, reveal on hover on desktop */}
         <div className="flex items-center gap-0.5 sm:gap-1 opacity-70 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
           <button
-            onClick={() => setIsEditing(true)}
+            onClick={handleEditClick}
             className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-[#EDE9E1] dark:hover:bg-[#2C2925] transition-colors"
-            title="Edit"
+            title="Edit transaksi"
             aria-label="Edit transaksi"
           >
             <Edit2 className="w-3.5 h-3.5" />
           </button>
           <button
-            onClick={() => onDelete(transaction.id)}
+            onClick={handleDeleteClick}
             className="p-1.5 rounded-lg text-stone-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
-            title="Hapus"
+            title="Hapus transaksi"
             aria-label="Hapus transaksi"
           >
             <Trash2 className="w-3.5 h-3.5" />

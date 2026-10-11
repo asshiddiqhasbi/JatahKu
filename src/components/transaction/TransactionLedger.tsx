@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Plus } from 'lucide-react';
 import { useBudget } from '../../context/BudgetContext';
-import type { DayGroupedTransactions } from '../../types/transaction';
+import type { Transaction, DayGroupedTransactions } from '../../types/transaction';
 import { TRANSACTION_CATEGORIES } from '../../constants/categories';
 import { TransactionItem } from './TransactionItem';
+import { EditTransactionModal } from './EditTransactionModal';
 import { formatDisplayDate } from '../../utils/dateUtils';
 import { formatIDR } from '../../utils/currency';
 
@@ -16,6 +17,7 @@ export const TransactionLedger: React.FC<TransactionLedgerProps> = ({ onOpenQuic
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
 
   if (!cycle) return null;
 
@@ -184,7 +186,7 @@ export const TransactionLedger: React.FC<TransactionLedgerProps> = ({ onOpenQuic
                       key={tx.id}
                       transaction={tx}
                       onDelete={deleteTransaction}
-                      onUpdate={updateTransaction}
+                      onEdit={(item) => setEditingTx(item)}
                     />
                   ))}
                 </div>
@@ -193,6 +195,15 @@ export const TransactionLedger: React.FC<TransactionLedgerProps> = ({ onOpenQuic
           </div>
         )}
       </div>
+
+      {/* Comprehensive Edit Transaction Modal */}
+      <EditTransactionModal
+        transaction={editingTx}
+        isOpen={!!editingTx}
+        onClose={() => setEditingTx(null)}
+        onSave={updateTransaction}
+        onDelete={deleteTransaction}
+      />
     </div>
   );
 };

@@ -389,6 +389,7 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         if (updates.qty !== undefined) payload.qty = updates.qty;
         if (updates.unitPrice !== undefined) payload.unit_price = updates.unitPrice;
         if (updates.source !== undefined) payload.source = updates.source;
+        if (updates.type !== undefined) payload.type = updates.type;
 
         await supabase.from('transactions').update(payload).eq('id', id).eq('user_id', user.id);
       } catch (e) {
