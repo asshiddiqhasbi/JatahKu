@@ -122,19 +122,23 @@ export const TransactionLedger: React.FC<TransactionLedgerProps> = ({ onOpenQuic
             Pemasukan ({incomeCount})
           </button>
         )}
-        {TRANSACTION_CATEGORIES.map((cat) => (
-          <button
-            key={cat.id}
-            onClick={() => setSelectedCategory(cat.id)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-colors ${
-              selectedCategory === cat.id
-                ? 'bg-stone-900 dark:bg-[#F2EFE9] text-white dark:text-stone-900 shadow-2xs'
-                : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-[#EDE9E1] dark:hover:bg-[#2C2925]'
-            }`}
-          >
-            {cat.shortLabel}
-          </button>
-        ))}
+        {TRANSACTION_CATEGORIES.map((cat) => {
+          const Icon = cat.icon;
+          return (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-colors ${
+                selectedCategory === cat.id
+                  ? 'bg-stone-900 dark:bg-[#F2EFE9] text-white dark:text-stone-900 shadow-2xs font-semibold'
+                  : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-[#EDE9E1] dark:hover:bg-[#2C2925]'
+              }`}
+            >
+              <Icon className="w-3 h-3 shrink-0" />
+              <span>{cat.shortLabel}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Transactions List */}

@@ -1,15 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Utensils,
-  Home,
-  Bike,
-  GraduationCap,
-  Coffee,
-  MoreHorizontal,
   ArrowDownRight,
   ArrowUpRight,
   Check,
   Plus,
+  Minus,
   Trash2,
   ClipboardPaste,
   Layers,
@@ -39,7 +34,7 @@ interface MultiRowItem {
   date: string;
   note: string;
   category: TransactionCategory;
-  qty: number;
+  qty: number | '';
   unitPriceStr: string;
 }
 
@@ -52,7 +47,8 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
   // --- SINGLE MODE STATE ---
   const [singleType, setSingleType] = useState<TransactionType>('EXPENSE');
   const [singleUnitPriceStr, setSingleUnitPriceStr] = useState<string>('');
-  const [singleQty, setSingleQty] = useState<number>(1);
+  const [singleQtyStr, setSingleQtyStr] = useState<string>('1');
+  const singleQty = Math.max(1, parseInt(singleQtyStr, 10) || 1);
   const [singleCategory, setSingleCategory] = useState<TransactionCategory>('Makanan');
   const [singleIncomeSource, setSingleIncomeSource] = useState<string>('Transfer Ortu');
   const [singleNote, setSingleNote] = useState<string>('');
@@ -98,7 +94,7 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
       const today = getTodayDateString();
       setSingleType('EXPENSE');
       setSingleUnitPriceStr('');
-      setSingleQty(1);
+      setSingleQtyStr('1');
       setSingleCategory('Makanan');
       setSingleIncomeSource('Transfer Ortu');
       setSingleNote('');
@@ -229,8 +225,15 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
           return { ...r, unitPriceStr: (val as string).replace(/[^\d]/g, '') };
         }
         if (field === 'qty') {
-          const parsed = typeof val === 'number' ? val : parseInt(val as string, 10);
-          return { ...r, qty: isNaN(parsed) || parsed < 1 ? 1 : parsed };
+          if (val === '') {
+            return { ...r, qty: '' };
+          }
+          const raw = String(val).replace(/[^\d]/g, '');
+          if (raw === '') {
+            return { ...r, qty: '' };
+          }
+          const parsed = parseInt(raw, 10);
+          return { ...r, qty: isNaN(parsed) ? '' : Math.min(999, Math.max(1, parsed)) };
         }
         return { ...r, [field]: val };
       })
@@ -274,7 +277,9 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
 
   const validRowsToSubmit = rows.filter((r) => parseRawNumber(r.unitPriceStr) > 0);
   const multiTotalAmount = validRowsToSubmit.reduce(
-    (sum, r) => sum + parseRawNumber(r.unitPriceStr) * Math.max(1, r.qty),
+    (sum, r) =>
+      sum +
+      parseRawNumber(r.unitPriceStr) * (typeof r.qty === 'number' && r.qty >= 1 ? r.qty : 1),
     0
   );
 
@@ -286,7 +291,7 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
     }
 
     const transactionsToInsert = validRowsToSubmit.map((r) => {
-      const qty = Math.max(1, r.qty);
+      const qty = typeof r.qty === 'number' && r.qty >= 1 ? r.qty : 1;
       const unitPrice = parseRawNumber(r.unitPriceStr);
       const totalAmount = unitPrice * qty;
       let finalNote = r.note.trim();
@@ -307,23 +312,6 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
 
     addTransactions(transactionsToInsert);
     onClose();
-  };
-
-  const getCategoryIcon = (id: TransactionCategory) => {
-    switch (id) {
-      case 'Makanan':
-        return <Utensils className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />;
-      case 'Kebutuhan Kos':
-        return <Home className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />;
-      case 'Transportasi':
-        return <Bike className="w-3.5 h-3.5 text-[#2D6A4F] dark:text-[#42B07E]" />;
-      case 'Kuliah':
-        return <GraduationCap className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />;
-      case 'Hiburan & Sosial':
-        return <Coffee className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />;
-      case 'Lainnya':
-        return <MoreHorizontal className="w-3.5 h-3.5 text-stone-500 dark:text-stone-400" />;
-    }
   };
 
   return (
@@ -380,7 +368,7 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                 onClick={() => {
                   setSingleType('EXPENSE');
                   setSingleUnitPriceStr('');
-                  setSingleQty(1);
+                  setSingleQtyStr('1');
                 }}
                 className={`flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg transition-all ${
                   singleType === 'EXPENSE'
@@ -396,7 +384,7 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                 onClick={() => {
                   setSingleType('INCOME');
                   setSingleUnitPriceStr('');
-                  setSingleQty(1);
+                  setSingleQtyStr('1');
                 }}
                 className={`flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg transition-all ${
                   singleType === 'INCOME'
@@ -602,20 +590,66 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                     </div>
                   </div>
 
-                  {/* Quantity / Jumlah Input */}
+                  {/* Quantity / Jumlah Input with Mobile Stepper Buttons */}
                   <div>
                     <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
                       Jumlah (Biji/Pcs)
                     </label>
-                    <div className="flex items-center">
-                      <input
-                        type="number"
-                        min={1}
-                        max={999}
-                        value={singleQty}
-                        onChange={(e) => setSingleQty(Math.max(1, parseInt(e.target.value || '1', 10)))}
-                        className="w-full px-3 py-2.5 bg-[#FAF8F5] dark:bg-[#1C1A18] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl text-center text-xl font-mono font-bold text-stone-900 dark:text-[#F2EFE9] focus:outline-none focus:border-[#2D6A4F] dark:focus:border-[#42B07E]"
-                      />
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const current = parseInt(singleQtyStr, 10) || 1;
+                          if (current > 1) {
+                            setSingleQtyStr(String(current - 1));
+                          }
+                        }}
+                        disabled={singleQty <= 1}
+                        aria-label="Kurangi jumlah"
+                        className="w-11 h-11 flex items-center justify-center rounded-xl border border-[#E7E3DA] dark:border-[#38342F] bg-white dark:bg-[#1C1A18] text-stone-700 dark:text-stone-300 hover:bg-[#F4F1EA] dark:hover:bg-[#2C2925] disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95 shrink-0"
+                      >
+                        <Minus className="w-4 h-4 stroke-[2.5]" />
+                      </button>
+                      <div className="relative flex-1">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={singleQtyStr}
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/[^\d]/g, '');
+                            if (raw === '') {
+                              setSingleQtyStr('');
+                            } else {
+                              const num = Math.min(999, parseInt(raw, 10));
+                              setSingleQtyStr(String(num));
+                            }
+                          }}
+                          onBlur={() => {
+                            const num = parseInt(singleQtyStr, 10);
+                            if (!num || num < 1) {
+                              setSingleQtyStr('1');
+                            }
+                          }}
+                          className="w-full py-2 bg-[#FAF8F5] dark:bg-[#1C1A18] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl text-center text-xl font-mono font-bold text-stone-900 dark:text-[#F2EFE9] focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]/20 focus:border-[#2D6A4F] dark:focus:border-[#42B07E] transition-all"
+                          placeholder="1"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const current = parseInt(singleQtyStr, 10) || 1;
+                          if (current < 999) {
+                            setSingleQtyStr(String(current + 1));
+                          }
+                        }}
+                        disabled={singleQty >= 999}
+                        aria-label="Tambah jumlah"
+                        className="w-11 h-11 flex items-center justify-center rounded-xl border border-[#E7E3DA] dark:border-[#38342F] bg-white dark:bg-[#1C1A18] text-stone-700 dark:text-stone-300 hover:bg-[#F4F1EA] dark:hover:bg-[#2C2925] disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95 shrink-0"
+                      >
+                        <Plus className="w-4 h-4 stroke-[2.5]" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -654,19 +688,21 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {TRANSACTION_CATEGORIES.map((cat) => {
                       const isSelected = singleCategory === cat.id;
+                      const Icon = cat.icon;
                       return (
                         <button
                           key={cat.id}
                           type="button"
                           onClick={() => setSingleCategory(cat.id)}
+                          title={cat.description}
                           className={`flex items-center gap-2 p-2.5 rounded-xl border text-left text-xs transition-all ${
                             isSelected
                               ? 'bg-stone-900 dark:bg-[#F2EFE9] text-white dark:text-stone-900 font-semibold border-stone-900 dark:border-[#F2EFE9] shadow-2xs'
                               : 'bg-white dark:bg-[#1C1A18] border-[#E7E3DA] dark:border-[#38342F] text-stone-700 dark:text-stone-300 hover:bg-[#FAF8F5] dark:hover:bg-[#25221F]'
                           }`}
                         >
-                          <span className={isSelected ? 'text-white dark:text-stone-900' : ''}>
-                            {getCategoryIcon(cat.id)}
+                          <span className={isSelected ? 'text-white dark:text-stone-900' : cat.iconColor}>
+                            <Icon className="w-3.5 h-3.5 shrink-0" />
                           </span>
                           <span className="truncate">{cat.shortLabel}</span>
                         </button>
@@ -854,6 +890,9 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
 
             {/* Multi-Row Table Container */}
             <div className="border border-[#E7E3DA] dark:border-[#38342F] rounded-xl bg-white dark:bg-[#1E1C1A] overflow-hidden">
+              <div className="sm:hidden px-3 pt-2 text-[10px] text-stone-500 dark:text-stone-400 font-medium">
+                Geser tabel ke samping untuk melihat semua kolom →
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[800px]">
                   <thead>
@@ -871,7 +910,7 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                   <tbody className="divide-y divide-[#EDE9E1] dark:divide-[#2C2925]">
                     {rows.map((row, index) => {
                       const unitPrice = parseRawNumber(row.unitPriceStr);
-                      const qty = Math.max(1, row.qty);
+                      const qty = typeof row.qty === 'number' && row.qty >= 1 ? row.qty : 1;
                       const rowTotal = unitPrice * qty;
 
                       return (
@@ -916,17 +955,7 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                             >
                               {TRANSACTION_CATEGORIES.map((cat) => (
                                 <option key={cat.id} value={cat.id}>
-                                  {cat.id === 'Makanan'
-                                    ? 'Makanan & Minuman'
-                                    : cat.id === 'Kebutuhan Kos'
-                                    ? 'Kebutuhan Kos'
-                                    : cat.id === 'Transportasi'
-                                    ? 'Transportasi'
-                                    : cat.id === 'Kuliah'
-                                    ? 'Kuliah & Tugas'
-                                    : cat.id === 'Hiburan & Sosial'
-                                    ? 'Hiburan & Santai'
-                                    : 'Kebutuhan Lainnya'}
+                                  {cat.shortLabel} - {cat.label}
                                 </option>
                               ))}
                             </select>
@@ -935,11 +964,17 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                           {/* Quantity */}
                           <td className="py-2 px-2">
                             <input
-                              type="number"
-                              min={1}
-                              max={999}
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
                               value={row.qty}
+                              onFocus={(e) => e.target.select()}
                               onChange={(e) => handleUpdateRow(row.id, 'qty', e.target.value)}
+                              onBlur={() => {
+                                if (!row.qty || Number(row.qty) < 1) {
+                                  handleUpdateRow(row.id, 'qty', 1);
+                                }
+                              }}
                               className="w-full px-1.5 py-1 text-xs font-mono font-bold text-center bg-stone-50 dark:bg-[#282622] border border-[#E7E3DA] dark:border-[#38342F] rounded-lg text-stone-900 dark:text-[#F2EFE9] focus:outline-none focus:border-[#2D6A4F]"
                             />
                           </td>
@@ -991,17 +1026,17 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
               </div>
 
               {/* Table Footer with Add Row Button */}
-              <div className="p-3 bg-[#FAF8F5] dark:bg-[#24211E] border-t border-[#EDE9E1] dark:border-[#332F2B] flex items-center justify-between">
+              <div className="p-3 bg-[#FAF8F5] dark:bg-[#24211E] border-t border-[#EDE9E1] dark:border-[#332F2B] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
                 <button
                   type="button"
                   onClick={handleAddRow}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white dark:bg-[#1E1C1A] hover:bg-[#F2EFE9] dark:hover:bg-[#2C2925] text-stone-700 dark:text-stone-300 border border-[#E7E3DA] dark:border-[#38342F] transition-colors shadow-2xs"
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-white dark:bg-[#1E1C1A] hover:bg-[#F2EFE9] dark:hover:bg-[#2C2925] text-stone-700 dark:text-stone-300 border border-[#E7E3DA] dark:border-[#38342F] transition-colors shadow-2xs"
                 >
                   <Plus className="w-3.5 h-3.5 text-[#2D6A4F] dark:text-[#42B07E]" />
                   <span>Tambah Baris Belanjaan</span>
                 </button>
 
-                <span className="text-xs text-stone-500 dark:text-stone-400 font-mono">
+                <span className="text-xs text-stone-500 dark:text-stone-400 font-mono text-center sm:text-right">
                   {validRowsToSubmit.length} dari {rows.length} barang siap disimpan
                 </span>
               </div>
