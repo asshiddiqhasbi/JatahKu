@@ -8,7 +8,7 @@ import {
   Trash2,
   ClipboardPaste,
   Layers,
-  Sparkles,
+  Info,
   Calendar,
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
@@ -334,25 +334,26 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
           <button
             type="button"
             onClick={() => setActiveTab('SINGLE')}
-            className={`flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${
+            className={`inline-flex items-center justify-center gap-1.5 py-2.5 px-3 text-xs font-semibold rounded-lg whitespace-nowrap transition-all ${
               activeTab === 'SINGLE'
-                ? 'bg-white dark:bg-[#282622] text-stone-900 dark:text-[#F2EFE9] shadow-2xs'
+                ? 'bg-white dark:bg-[#282622] text-stone-900 dark:text-[#F2EFE9] shadow-2xs font-bold'
                 : 'text-stone-500 dark:text-stone-400 hover:text-stone-850 dark:hover:text-stone-200'
             }`}
           >
+            <Plus className="w-3.5 h-3.5 shrink-0" />
             <span>Satu Transaksi</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('MULTI')}
-            className={`flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${
+            className={`inline-flex items-center justify-center gap-1.5 py-2.5 px-3 text-xs font-semibold rounded-lg whitespace-nowrap transition-all ${
               activeTab === 'MULTI'
-                ? 'bg-white dark:bg-[#282622] text-[#2D6A4F] dark:text-[#42B07E] shadow-2xs'
+                ? 'bg-white dark:bg-[#282622] text-[#2D6A4F] dark:text-[#42B07E] shadow-2xs font-bold'
                 : 'text-stone-500 dark:text-stone-400 hover:text-stone-850 dark:hover:text-stone-200'
             }`}
           >
-            <Layers className="w-3.5 h-3.5" />
-            <span>Catat Sekaligus (Rekap)</span>
+            <Layers className="w-3.5 h-3.5 shrink-0" />
+            <span>Catat Sekaligus</span>
           </button>
         </div>
 
@@ -860,10 +861,10 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
               {showPasteBox && (
                 <div className="pt-3 border-t border-[#E7E3DA] dark:border-[#332F2B] space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs text-stone-600 dark:text-stone-400 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <p className="text-xs text-stone-500 dark:text-stone-400 flex items-center gap-1.5 font-medium">
+                      <Info className="w-3.5 h-3.5 text-stone-400 dark:text-stone-500 shrink-0" />
                       <span>
-                        Mendukung tanggal (misal <i>20 sep</i>), singkatan ribuan (<i>40 = 40rb</i>), dan jumlah (<i>Tissue (3) 24</i>).
+                        Format yang didukung: tanggal (misal <i>20 sep</i>), ribuan (<i>40 = 40rb</i>), dan jumlah (<i>Tissue (3) 24</i>).
                       </span>
                     </p>
                   </div>
