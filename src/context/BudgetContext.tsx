@@ -31,6 +31,8 @@ interface BudgetContextType {
   addTransactions: (txList: Array<Omit<Transaction, 'id' | 'createdAt' | 'cycleId'>>) => Promise<void>;
   updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
+  bulkMoveTransactionsDate: (oldDate: string, newDate: string) => Promise<void>;
+  bulkDeleteTransactionsByDate: (date: string) => Promise<void>;
   updateCycle: (updates: Partial<BudgetCycle>) => Promise<void>;
   setupNewCycle: (newCycle: BudgetCycle) => Promise<void>;
   backupData: () => void;
@@ -410,6 +412,50 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   };
 
+  const bulkMoveTransactionsDate = async (oldDate: string, newDate: string) => {
+    if (!cycle || !oldDate || !newDate || oldDate === newDate) return;
+
+    setTransactions((prev) =>
+      prev.map((tx) =>
+        tx.cycleId === cycle.id && tx.date === oldDate ? { ...tx, date: newDate } : tx
+      )
+    );
+
+    if (user) {
+      try {
+        await supabase
+          .from('transactions')
+          .update({ date: newDate })
+          .eq('user_id', user.id)
+          .eq('cycle_id', cycle.id)
+          .eq('date', oldDate);
+      } catch (e) {
+        console.error('Gagal memindahkan tanggal transaksi massal di Supabase:', e);
+      }
+    }
+  };
+
+  const bulkDeleteTransactionsByDate = async (date: string) => {
+    if (!cycle || !date) return;
+
+    setTransactions((prev) =>
+      prev.filter((tx) => !(tx.cycleId === cycle.id && tx.date === date))
+    );
+
+    if (user) {
+      try {
+        await supabase
+          .from('transactions')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('cycle_id', cycle.id)
+          .eq('date', date);
+      } catch (e) {
+        console.error('Gagal menghapus transaksi massal per tanggal di Supabase:', e);
+      }
+    }
+  };
+
   const updateCycle = async (updates: Partial<BudgetCycle>) => {
     if (!cycle) return;
     const updated = { ...cycle, ...updates };
@@ -563,6 +609,8 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         addTransactions,
         updateTransaction,
         deleteTransaction,
+        bulkMoveTransactionsDate,
+        bulkDeleteTransactionsByDate,
         updateCycle,
         setupNewCycle,
         backupData,

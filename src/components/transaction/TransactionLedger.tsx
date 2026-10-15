@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, CalendarDays } from 'lucide-react';
 import { useBudget } from '../../context/BudgetContext';
 import type { Transaction, DayGroupedTransactions } from '../../types/transaction';
 import { TRANSACTION_CATEGORIES } from '../../constants/categories';
 import { TransactionItem } from './TransactionItem';
 import { EditTransactionModal } from './EditTransactionModal';
+import { DateGroupActionsModal } from './DateGroupActionsModal';
 import { formatDisplayDate } from '../../utils/dateUtils';
 import { formatIDR } from '../../utils/currency';
 
@@ -13,11 +14,19 @@ interface TransactionLedgerProps {
 }
 
 export const TransactionLedger: React.FC<TransactionLedgerProps> = ({ onOpenQuickEntry }) => {
-  const { transactions, cycle, deleteTransaction, updateTransaction } = useBudget();
+  const {
+    transactions,
+    cycle,
+    deleteTransaction,
+    updateTransaction,
+    bulkMoveTransactionsDate,
+    bulkDeleteTransactionsByDate,
+  } = useBudget();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [managingDateGroup, setManagingDateGroup] = useState<DayGroupedTransactions | null>(null);
 
   if (!cycle) return null;
 
@@ -165,8 +174,19 @@ export const TransactionLedger: React.FC<TransactionLedgerProps> = ({ onOpenQuic
             {groupedTransactions.map((group) => (
               <div key={group.date} className="space-y-1">
                 {/* Date Group Header */}
-                <div className="flex items-center justify-between px-2 py-1 text-xs border-b border-[#EDE9E1] dark:border-[#332F2B] font-medium">
-                  <span className="font-bold text-stone-700 dark:text-stone-300">{group.displayDate}</span>
+                <div className="flex items-center justify-between px-2 py-1.5 text-xs border-b border-[#EDE9E1] dark:border-[#332F2B] font-medium">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-stone-700 dark:text-stone-300">{group.displayDate}</span>
+                    <button
+                      type="button"
+                      onClick={() => setManagingDateGroup(group)}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-[#F2EFE9] bg-[#FAF8F5] dark:bg-[#23211E] hover:bg-[#EDE9E1] dark:hover:bg-[#2C2925] border border-[#E7E3DA] dark:border-[#38342F] transition-all shadow-2xs"
+                      title={`Kelola semua transaksi pada ${group.displayDate}`}
+                    >
+                      <CalendarDays className="w-3 h-3 text-[#2D6A4F] dark:text-[#42B07E]" />
+                      <span>Kelola Hari Ini</span>
+                    </button>
+                  </div>
                   <div className="flex items-center gap-2">
                     {group.totalIncome > 0 && (
                       <span className="text-[#2D6A4F] dark:text-[#42B07E] font-mono font-bold tabular-nums">
@@ -203,6 +223,15 @@ export const TransactionLedger: React.FC<TransactionLedgerProps> = ({ onOpenQuic
         onClose={() => setEditingTx(null)}
         onSave={updateTransaction}
         onDelete={deleteTransaction}
+      />
+
+      {/* Date-Level Bulk Actions Modal */}
+      <DateGroupActionsModal
+        group={managingDateGroup}
+        isOpen={!!managingDateGroup}
+        onClose={() => setManagingDateGroup(null)}
+        onMoveDate={bulkMoveTransactionsDate}
+        onDeleteGroup={bulkDeleteTransactionsByDate}
       />
     </div>
   );
