@@ -63,79 +63,78 @@ export const CycleHistoryModal: React.FC<CycleHistoryModalProps> = ({
         {/* Periode Utama / Aktif Saat Ini */}
         {latestCycle && (
           <div className="p-4 bg-white dark:bg-[#23211E] border-2 border-[#2D6A4F]/40 dark:border-[#42B07E]/40 rounded-2xl shadow-2xs space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+            {/* Top row: Status Badge & Settings Button */}
+            <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#E8F5E9] dark:bg-[#1A2E22] text-[#2D6A4F] dark:text-[#76CEA2] border border-[#C8E6C9] dark:border-[#2A4736]">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#E8F5E9] dark:bg-[#1A2E22] text-[#2D6A4F] dark:text-[#76CEA2] border border-[#C8E6C9] dark:border-[#2A4736]">
                   <span className="w-2 h-2 rounded-full bg-[#2D6A4F] dark:bg-[#42B07E] animate-pulse" />
                   <span>Periode Aktif</span>
                 </span>
-                <span className="text-xs font-mono font-semibold text-stone-500 dark:text-stone-400">
+                <span className="text-xs font-mono font-medium text-stone-500 dark:text-stone-400">
                   {getInclusiveDays(latestCycle.startDate, latestCycle.endDate)} hari
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    onOpenCycleConfig();
-                  }}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200 bg-[#F4F1EA] dark:bg-[#2C2925] hover:bg-[#EDE9E1] dark:hover:bg-[#38342F] rounded-lg transition-colors border border-[#E7E3DA] dark:border-[#38342F]"
-                  title="Ubah uang saku atau tanggal periode"
-                >
-                  <Settings className="w-3.5 h-3.5" />
-                  <span>Atur</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenCycleConfig();
+                }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200 bg-[#F4F1EA] dark:bg-[#2C2925] hover:bg-[#EDE9E1] dark:hover:bg-[#38342F] rounded-lg transition-colors border border-[#E7E3DA] dark:border-[#38342F]"
+                title="Ubah uang saku atau tanggal periode"
+              >
+                <Settings className="w-3.5 h-3.5" />
+                <span>Atur</span>
+              </button>
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-[#EDE9E1] dark:border-[#332F2B]">
-              <div>
-                <p className="text-sm font-bold text-stone-900 dark:text-[#F2EFE9] flex items-center gap-1.5">
-                  <Calendar className="w-4 h-4 text-[#2D6A4F] dark:text-[#42B07E]" />
-                  <span>
-                    {formatShortDate(latestCycle.startDate)} - {formatShortDate(latestCycle.endDate)}
-                  </span>
-                </p>
-                <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
-                  Uang saku awal: <span className="font-mono font-semibold text-stone-700 dark:text-stone-300">{formatIDR(latestCycle.initialBalance)}</span>
+            {/* Middle row: Full width date and allowance info */}
+            <div className="py-0.5">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-[#2D6A4F] dark:text-[#42B07E] shrink-0" />
+                <p className="text-sm sm:text-base font-bold text-stone-900 dark:text-[#F2EFE9] whitespace-nowrap tracking-tight">
+                  {formatShortDate(latestCycle.startDate)} - {formatShortDate(latestCycle.endDate)}
                 </p>
               </div>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 pl-6">
+                Uang saku awal: <span className="font-mono font-semibold text-stone-700 dark:text-stone-300">{formatIDR(latestCycle.initialBalance)}</span>
+              </p>
+            </div>
 
-              <div className="flex items-center gap-2 pt-2 sm:pt-0">
-                {activeCycle?.id !== latestCycle.id ? (
+            {/* Bottom row: Spacious action buttons */}
+            <div className="pt-2 border-t border-[#EDE9E1] dark:border-[#332F2B]">
+              {activeCycle?.id !== latestCycle.id ? (
+                <button
+                  type="button"
+                  onClick={() => handleSelectCycle(latestCycle.id)}
+                  className="w-full py-2 text-xs font-semibold rounded-xl bg-[#2D6A4F] text-white hover:bg-[#23563F] transition-all shadow-2xs whitespace-nowrap text-center"
+                >
+                  Buka Periode Ini
+                </button>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => handleSelectCycle(latestCycle.id)}
-                    className="px-3.5 py-2 text-xs font-semibold rounded-xl bg-[#2D6A4F] text-white hover:bg-[#23563F] transition-all shadow-2xs"
+                    onClick={() => {
+                      onClose();
+                      onOpenPeriodSummary(latestCycle);
+                    }}
+                    className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold rounded-xl text-stone-700 dark:text-stone-300 bg-stone-100 dark:bg-[#2C2925] hover:bg-stone-200 dark:hover:bg-[#38342F] transition-colors whitespace-nowrap"
                   >
-                    Buka Periode Ini
+                    <span>Rapor Sementara</span>
                   </button>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onClose();
-                        onOpenPeriodSummary(latestCycle);
-                      }}
-                      className="px-3 py-1.5 text-xs font-semibold rounded-xl text-stone-700 dark:text-stone-300 bg-stone-100 dark:bg-[#2C2925] hover:bg-stone-200 dark:hover:bg-[#38342F] transition-colors"
-                    >
-                      Rapor Sementara
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleFinishEarly}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl text-amber-900 dark:text-amber-200 bg-amber-100/80 dark:bg-amber-950/40 hover:bg-amber-200/80 dark:hover:bg-amber-900/50 border border-amber-300 dark:border-amber-800 transition-colors shadow-2xs"
-                      title="Selesaikan periode ini lebih awal dan tutup buku"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
-                      <span>Selesaikan & Tutup Buku</span>
-                    </button>
-                  </>
-                )}
-              </div>
+                  <button
+                    type="button"
+                    onClick={handleFinishEarly}
+                    className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold rounded-xl text-amber-900 dark:text-amber-200 bg-amber-100/80 dark:bg-amber-950/40 hover:bg-amber-200/80 dark:hover:bg-amber-900/50 border border-amber-300 dark:border-amber-800 transition-colors shadow-2xs whitespace-nowrap"
+                    title="Selesaikan periode ini lebih awal dan tutup buku"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400 shrink-0" />
+                    <span>Selesaikan & Tutup Buku</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -144,24 +143,13 @@ export const CycleHistoryModal: React.FC<CycleHistoryModalProps> = ({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold text-stone-700 dark:text-stone-300 uppercase tracking-wider flex items-center gap-1.5">
-              <Archive className="w-3.5 h-3.5 text-stone-400" />
+              <Archive className="w-3.5 h-3.5 text-stone-400 shrink-0" />
               <span>Riwayat Periode Sebelumnya ({pastCycles.length})</span>
             </h3>
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                onOpenNewCycleSetup();
-              }}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-[#2D6A4F] dark:text-[#42B07E] hover:underline"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>+ Buat Periode Baru</span>
-            </button>
           </div>
 
           {pastCycles.length === 0 ? (
-            <div className="p-6 text-center rounded-xl border border-dashed border-[#E7E3DA] dark:border-[#38342F] bg-[#FAF8F5] dark:bg-[#1C1A18] text-xs text-stone-500 dark:text-stone-400">
+            <div className="p-6 text-center rounded-xl border border-dashed border-[#E7E3DA] dark:border-[#38342F] bg-[#FAF8F5] dark:bg-[#1C1A18] text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
               Belum ada riwayat periode sebelumnya. Setiap kali kamu menyelesaikan periode, arsipnya akan tersimpan rapi di sini.
             </div>
           ) : (
@@ -180,15 +168,15 @@ export const CycleHistoryModal: React.FC<CycleHistoryModalProps> = ({
                     }`}
                   >
                     <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-stone-900 dark:text-[#F2EFE9]">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-bold text-stone-900 dark:text-[#F2EFE9] whitespace-nowrap">
                           {formatShortDate(past.startDate)} - {formatShortDate(past.endDate)}
                         </span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-md bg-stone-100 dark:bg-[#2C2925] text-stone-600 dark:text-stone-400 font-mono">
+                        <span className="text-[10px] px-2 py-0.5 rounded-md bg-stone-100 dark:bg-[#2C2925] text-stone-600 dark:text-stone-400 font-mono whitespace-nowrap">
                           {days} hari
                         </span>
                         {isSelected && (
-                          <span className="text-[10px] font-bold text-[#2D6A4F] dark:text-[#42B07E]">
+                          <span className="text-[10px] font-bold text-[#2D6A4F] dark:text-[#42B07E] whitespace-nowrap">
                             (Sedang Dilihat)
                           </span>
                         )}
@@ -198,14 +186,14 @@ export const CycleHistoryModal: React.FC<CycleHistoryModalProps> = ({
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
                       <button
                         type="button"
                         onClick={() => {
                           onClose();
                           onOpenPeriodSummary(past);
                         }}
-                        className="px-2.5 py-1 text-xs font-medium text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white bg-[#F4F1EA] dark:bg-[#2C2925] rounded-lg transition-colors"
+                        className="px-2.5 py-1.5 text-xs font-medium text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white bg-[#F4F1EA] dark:bg-[#2C2925] rounded-lg transition-colors whitespace-nowrap"
                       >
                         Rapor
                       </button>
@@ -213,7 +201,7 @@ export const CycleHistoryModal: React.FC<CycleHistoryModalProps> = ({
                         type="button"
                         onClick={() => handleSelectCycle(past.id)}
                         disabled={isSelected}
-                        className="px-3 py-1 text-xs font-semibold rounded-lg bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 disabled:opacity-40 hover:bg-stone-800 transition-colors"
+                        className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 disabled:opacity-40 hover:bg-stone-800 transition-colors whitespace-nowrap"
                       >
                         {isSelected ? 'Aktif Terbuka' : 'Buka Arsip'}
                       </button>
@@ -226,14 +214,14 @@ export const CycleHistoryModal: React.FC<CycleHistoryModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-between pt-2 border-t border-[#EDE9E1] dark:border-[#332F2B]">
+        <div className="flex items-center justify-between pt-3 border-t border-[#EDE9E1] dark:border-[#332F2B]">
           <button
             type="button"
             onClick={() => {
               onClose();
               onOpenNewCycleSetup();
             }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-[#2D6A4F] text-white hover:bg-[#23563F] shadow-2xs transition-all"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-[#2D6A4F] text-white hover:bg-[#23563F] shadow-2xs transition-all active:scale-98 whitespace-nowrap"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Mulai Periode Baru</span>
