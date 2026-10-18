@@ -88,15 +88,21 @@ export const PeriodSummaryModal: React.FC<PeriodSummaryModalProps> = ({
   let statusTitle = '';
   let statusDescription = '';
 
+  const totalFund = metrics.initialBalance + metrics.totalIncome;
+
   if (!isCompletedOrExpired) {
     if (metrics.currentBalance <= 0) {
       statusVariant = 'danger';
       statusTitle = 'Jatah Belanja Telah Melampaui Batas';
       statusDescription = `Total belanja saat ini (${formatIDR(metrics.totalExpense)}) telah menghabiskan seluruh alokasi dana saku. Tahan pengeluaran tambahan hingga periode berikutnya.`;
-    } else if (metrics.safeDailyAllowance < metrics.initialDailyBaseline * 0.35) {
+    } else if (
+      metrics.currentBalance < totalFund * 0.1 ||
+      metrics.safeDailyAllowance < metrics.initialDailyBaseline * 0.7 ||
+      metrics.averageDailyExpense > metrics.initialDailyBaseline * 1.15
+    ) {
       statusVariant = 'warning';
       statusTitle = 'Saldo Kas Berjalan Menipis';
-      statusDescription = `Sisa saldo kas ${formatIDR(metrics.currentBalance)} untuk ${metrics.daysRemaining} hari ke depan. Rekomendasi belanja harian disesuaikan menjadi ${formatIDR(metrics.safeDailyAllowance)}/hari.`;
+      statusDescription = `Sisa saldo kas tersisa ${formatIDR(metrics.currentBalance)} (${metrics.daysRemaining} hari tersisa). Jaga pengeluaran harian agar saku cukup sampai penutupan periode.`;
     } else {
       statusVariant = 'success';
       statusTitle = 'Pengeluaran Berjalan Terkendali';
@@ -118,6 +124,8 @@ export const PeriodSummaryModal: React.FC<PeriodSummaryModalProps> = ({
     }
   }
 
+  const expensePercentage = totalFund > 0 ? Math.round((metrics.totalExpense / totalFund) * 100) : 0;
+
   return (
     <Modal
       isOpen={isOpen}
@@ -128,7 +136,7 @@ export const PeriodSummaryModal: React.FC<PeriodSummaryModalProps> = ({
           ? `Rekap hasil keuangan ${formatShortDate(cycle.startDate)} sampai ${formatShortDate(cycle.endDate)}`
           : `Progres pengeluaran dari ${formatShortDate(cycle.startDate)} sampai hari ini (${metrics.daysPassed} hari berjalan)`
       }
-      maxWidth="lg"
+      maxWidth="xl"
     >
       <div className="space-y-5">
         {/* Banner Evaluasi Utama: Faktual & Bebas Slop */}
@@ -156,82 +164,92 @@ export const PeriodSummaryModal: React.FC<PeriodSummaryModalProps> = ({
           </div>
         </div>
 
-        {/* 4 Kartu Metrik Rekap (Rapi, Sejajar, Anti-Wrap Canggung) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          {/* 1. Total Dana Masuk */}
-          <div className="p-3 bg-[#FAF8F5] dark:bg-[#1C1A18] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl flex flex-col justify-between">
+        {/* 4 Kartu Metrik Rekap (2x2 Grid Luas: Angka Utuh, Tidak Ada Truncate Angka) */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* 1. Total Anggaran */}
+          <div className="p-3.5 bg-[#FAF8F5] dark:bg-[#1C1A18] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl flex flex-col justify-between">
             <div>
-              <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400 block truncate whitespace-nowrap">
+              <span className="text-xs font-medium text-stone-500 dark:text-stone-400 block">
                 Total Anggaran
               </span>
-              <span className="font-mono text-sm sm:text-base font-bold text-stone-900 dark:text-[#F2EFE9] block truncate tabular-nums mt-0.5">
-                {formatIDR(metrics.initialBalance + metrics.totalIncome)}
+              <span className="font-mono text-base sm:text-lg font-bold text-stone-900 dark:text-[#F2EFE9] block tabular-nums mt-0.5">
+                {formatIDR(totalFund)}
               </span>
             </div>
-            <span
-              className="text-[10px] sm:text-[11px] text-stone-400 dark:text-stone-500 block truncate whitespace-nowrap mt-1"
-              title={metrics.totalIncome > 0 ? `Uang saku awal + ekstra ${formatIDR(metrics.totalIncome)}` : 'Alokasi saku awal'}
-            >
-              {metrics.totalIncome > 0 ? `+${formatIDR(metrics.totalIncome)} ekstra` : 'Alokasi saku awal'}
-            </span>
+            <div className="mt-2.5 pt-2 border-t border-[#EDE9E1] dark:border-[#2C2925] text-xs text-stone-500 dark:text-stone-400">
+              {metrics.totalIncome > 0 ? (
+                <div className="flex items-center justify-between gap-1 flex-wrap">
+                  <span>Saku: {formatIDR(metrics.initialBalance)}</span>
+                  <span className="text-[#2D6A4F] dark:text-[#42B07E] font-medium font-mono">
+                    +{formatIDR(metrics.totalIncome)}
+                  </span>
+                </div>
+              ) : (
+                <span>Alokasi awal uang saku</span>
+              )}
+            </div>
           </div>
 
           {/* 2. Total Belanja */}
-          <div className="p-3 bg-[#FAF8F5] dark:bg-[#1C1A18] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl flex flex-col justify-between">
+          <div className="p-3.5 bg-[#FAF8F5] dark:bg-[#1C1A18] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl flex flex-col justify-between">
             <div>
-              <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400 block truncate whitespace-nowrap">
+              <span className="text-xs font-medium text-stone-500 dark:text-stone-400 block">
                 Total Belanja
               </span>
-              <span className="font-mono text-sm sm:text-base font-bold text-rose-600 dark:text-rose-400 block truncate tabular-nums mt-0.5">
+              <span className="font-mono text-base sm:text-lg font-bold text-rose-600 dark:text-rose-400 block tabular-nums mt-0.5">
                 {formatIDR(metrics.totalExpense)}
               </span>
             </div>
-            <span
-              className="text-[10px] sm:text-[11px] text-stone-400 dark:text-stone-500 block truncate whitespace-nowrap mt-1"
-              title={isCompletedOrExpired ? `Total ${metrics.daysPassed} hari tercatat` : `${metrics.daysPassed} hari berjalan`}
-            >
-              {isCompletedOrExpired ? `Total ${metrics.daysPassed} hari` : `${metrics.daysPassed} hari berjalan`}
-            </span>
+            <div className="mt-2.5 pt-2 border-t border-[#EDE9E1] dark:border-[#2C2925] text-xs text-stone-500 dark:text-stone-400 flex items-center justify-between gap-1 flex-wrap">
+              <span>{isCompletedOrExpired ? `Total ${metrics.daysPassed} hari` : `${metrics.daysPassed} hari berjalan`}</span>
+              <span className="font-mono font-medium text-stone-600 dark:text-stone-400">
+                {expensePercentage}% dana
+              </span>
+            </div>
           </div>
 
-          {/* 3. Sisa Kas */}
-          <div className="p-3 bg-[#FAF8F5] dark:bg-[#1C1A18] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl flex flex-col justify-between">
+          {/* 3. Sisa Saldo Kas */}
+          <div className="p-3.5 bg-[#FAF8F5] dark:bg-[#1C1A18] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl flex flex-col justify-between">
             <div>
-              <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400 block truncate whitespace-nowrap">
-                Sisa Kas
+              <span className="text-xs font-medium text-stone-500 dark:text-stone-400 block">
+                Sisa Saldo Kas
               </span>
-              <span className="font-mono text-sm sm:text-base font-bold text-[#2D6A4F] dark:text-[#42B07E] block truncate tabular-nums mt-0.5">
+              <span className="font-mono text-base sm:text-lg font-bold text-[#2D6A4F] dark:text-[#42B07E] block tabular-nums mt-0.5">
                 {formatIDR(metrics.currentBalance)}
               </span>
             </div>
-            <span
-              className="text-[10px] sm:text-[11px] text-stone-400 dark:text-stone-500 block truncate whitespace-nowrap mt-1"
-              title={!isCompletedOrExpired ? `${metrics.daysRemaining} hari tersisa` : metrics.currentBalance > 0 ? 'Surplus akhir' : 'Saldo habis'}
-            >
-              {!isCompletedOrExpired
-                ? `${metrics.daysRemaining} hari tersisa`
-                : metrics.currentBalance > 0
-                ? 'Surplus akhir'
-                : 'Saldo habis'}
-            </span>
+            <div className="mt-2.5 pt-2 border-t border-[#EDE9E1] dark:border-[#2C2925] text-xs text-stone-500 dark:text-stone-400 flex items-center justify-between gap-1 flex-wrap">
+              <span>{!isCompletedOrExpired ? `${metrics.daysRemaining} hari tersisa` : 'Saldo akhir'}</span>
+              <span className="font-medium text-stone-600 dark:text-stone-400">
+                {!isCompletedOrExpired
+                  ? (metrics.currentBalance > 0 ? 'Tersisa' : 'Habis')
+                  : (metrics.currentBalance > 0 ? 'Surplus' : 'Defisit')}
+              </span>
+            </div>
           </div>
 
-          {/* 4. Rata-rata Harian */}
-          <div className="p-3 bg-[#FAF8F5] dark:bg-[#1C1A18] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl flex flex-col justify-between">
+          {/* 4. Rata-rata Belanja Harian */}
+          <div className="p-3.5 bg-[#FAF8F5] dark:bg-[#1C1A18] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl flex flex-col justify-between">
             <div>
-              <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400 block truncate whitespace-nowrap">
-                Rata-rata Harian
+              <span className="text-xs font-medium text-stone-500 dark:text-stone-400 block">
+                Rata-rata Belanja Harian
               </span>
-              <span className="font-mono text-sm sm:text-base font-bold text-stone-900 dark:text-[#F2EFE9] block truncate tabular-nums mt-0.5">
+              <span className="font-mono text-base sm:text-lg font-bold text-stone-900 dark:text-[#F2EFE9] block tabular-nums mt-0.5">
                 {formatIDR(metrics.averageDailyExpense)}
               </span>
             </div>
-            <span
-              className="text-[10px] sm:text-[11px] text-stone-400 dark:text-stone-500 block truncate whitespace-nowrap mt-1"
-              title={`Target: ${formatIDR(metrics.initialDailyBaseline)}/hari`}
-            >
-              Target: {formatIDR(metrics.initialDailyBaseline)}/hari
-            </span>
+            <div className="mt-2.5 pt-2 border-t border-[#EDE9E1] dark:border-[#2C2925] text-xs text-stone-500 dark:text-stone-400 flex items-center justify-between gap-1 flex-wrap">
+              <span>Target: {formatIDR(metrics.initialDailyBaseline)}/hari</span>
+              <span
+                className={`font-medium ${
+                  metrics.averageDailyExpense > metrics.initialDailyBaseline
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : 'text-[#2D6A4F] dark:text-[#42B07E]'
+                }`}
+              >
+                {metrics.averageDailyExpense > metrics.initialDailyBaseline ? 'Di atas target' : 'Sesuai target'}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -246,7 +264,7 @@ export const PeriodSummaryModal: React.FC<PeriodSummaryModalProps> = ({
               <span className="text-[11px] text-stone-400 font-mono">Porsi pengeluaran</span>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {categories.slice(0, 4).map((cat) => (
                 <div key={cat.category} className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
