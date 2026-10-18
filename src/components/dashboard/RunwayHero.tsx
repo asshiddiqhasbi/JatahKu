@@ -1,18 +1,25 @@
 import React from 'react';
-import { AlertCircle, CheckCircle, ShieldAlert, Info, Settings, Plus } from 'lucide-react';
+import { AlertCircle, CheckCircle, ShieldAlert, Info, Settings, Plus, RotateCcw, Award } from 'lucide-react';
 import { useBudget } from '../../context/BudgetContext';
 import { formatIDR } from '../../utils/currency';
+import { isDatePast } from '../../utils/dateUtils';
 
 interface RunwayHeroProps {
   onOpenQuickEntry: () => void;
   onOpenCycleConfig: () => void;
+  onOpenPeriodSummary?: () => void;
 }
 
 export const RunwayHero: React.FC<RunwayHeroProps> = ({
   onOpenQuickEntry,
   onOpenCycleConfig,
+  onOpenPeriodSummary,
 }) => {
-  const { metrics } = useBudget();
+  const { cycle, cycles, metrics, isViewingArchived, switchCycle } = useBudget();
+
+  if (!cycle) return null;
+
+  const isCycleExpired = isDatePast(cycle.endDate) || !!cycle.isCompleted;
 
   const isOverspentToday = metrics.remainingDailyQuotaToday < 0;
   const spentRatio =
@@ -40,6 +47,46 @@ export const RunwayHero: React.FC<RunwayHeroProps> = ({
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-[#E7E3DA] dark:border-[#38342F] bg-white dark:bg-[#23211E] p-5 sm:p-7 shadow-[0_2px_12px_-2px_rgba(41,37,36,0.04)] transition-colors">
+      {/* Alert 1: Mode Arsip (Viewing past period) */}
+      {isViewingArchived && (
+        <div className="mb-5 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs text-amber-900 dark:text-amber-200">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+            <span>Mode Arsip: Kamu sedang melihat catatan periode lampau (hanya baca).</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => cycles.length > 0 && switchCycle(cycles[0].id)}
+            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-lg bg-amber-200 dark:bg-amber-900/60 hover:bg-amber-300 transition-colors shrink-0"
+          >
+            <RotateCcw className="w-3 h-3" />
+            <span>Kembali ke Periode Aktif</span>
+          </button>
+        </div>
+      )}
+
+      {/* Alert 2: Periode Telah Selesai (Active cycle expired or finished) */}
+      {isCycleExpired && !isViewingArchived && (
+        <div className="mb-5 p-3.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs text-emerald-900 dark:text-emerald-200">
+          <div>
+            <p className="font-bold">Periode Ini Telah Selesai</p>
+            <p className="text-[11px] opacity-90 mt-0.5">
+              Jadwal periode telah berakhir. Selesaikan catatan untuk melihat evaluasi akhir dan mulai periode baru.
+            </p>
+          </div>
+          {onOpenPeriodSummary && (
+            <button
+              type="button"
+              onClick={onOpenPeriodSummary}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-[#2D6A4F] hover:bg-[#23563F] text-white shadow-2xs transition-colors shrink-0"
+            >
+              <Award className="w-3.5 h-3.5" />
+              <span>Lihat Rapor Akhir</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Top row: Status Badge & Cycle Counter */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div
@@ -60,7 +107,9 @@ export const RunwayHero: React.FC<RunwayHeroProps> = ({
         >
           <span>Hari ke-{metrics.daysPassed} dari {metrics.totalDays}</span>
           <span className="text-stone-300 dark:text-stone-600">|</span>
-          <span className="text-stone-700 dark:text-stone-300 font-semibold">{metrics.daysRemaining} hari tersisa</span>
+          <span className="text-stone-700 dark:text-stone-300 font-semibold">
+            {isCycleExpired ? 'Periode Selesai' : `${metrics.daysRemaining} hari tersisa`}
+          </span>
           <Settings className="w-3.5 h-3.5 text-stone-400 ml-0.5" />
         </button>
       </div>
@@ -100,8 +149,9 @@ export const RunwayHero: React.FC<RunwayHeroProps> = ({
               </span>
               <button
                 onClick={onOpenQuickEntry}
-                className="p-1 rounded-lg bg-white dark:bg-[#282622] border border-[#E7E3DA] dark:border-[#38342F] text-stone-700 dark:text-stone-300 hover:text-[#2D6A4F] dark:hover:text-[#42B07E] transition-colors shadow-2xs"
-                title="Catat belanja hari ini"
+                disabled={isViewingArchived}
+                className="p-1 rounded-lg bg-white dark:bg-[#282622] border border-[#E7E3DA] dark:border-[#38342F] text-stone-700 dark:text-stone-300 hover:text-[#2D6A4F] dark:hover:text-[#42B07E] disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-2xs"
+                title={isViewingArchived ? 'Tidak bisa mencatat pada mode arsip' : 'Catat belanja hari ini'}
               >
                 <Plus className="w-3 h-3 stroke-[2.5]" />
               </button>
@@ -134,7 +184,7 @@ export const RunwayHero: React.FC<RunwayHeroProps> = ({
 
           {isOverspentToday && (
             <p className="mt-2 text-[11px] text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-[#2E1818] p-2 rounded-lg border border-rose-200/80 dark:border-[#4A2424] leading-tight">
-              Belanja hari ini melebihi jatah harian. Jatah untuk sisa hari ke depan sudah otomatis diturunkan agar uangmu tetap cukup.
+              Belanja hari ini melebihi jatah harian. Jatah untuk sisa hari ke depan sudah otomatis disesuaikan agar uangmu tetap cukup.
             </p>
           )}
         </div>

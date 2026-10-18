@@ -99,7 +99,7 @@ export const WelcomeSetup: React.FC<WelcomeSetupProps> = ({ onOpenAuth }) => {
             </label>
             <input
               type="text"
-              placeholder="Contoh: Hasbi"
+              placeholder="Nama panggilan"
               value={userName}
               onChange={(e) => setUserName(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-[#FAF8F5] dark:bg-[#1C1A18] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl text-sm text-stone-900 dark:text-[#F2EFE9] placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]/20 focus:border-[#2D6A4F] transition-all"
@@ -120,7 +120,7 @@ export const WelcomeSetup: React.FC<WelcomeSetupProps> = ({ onOpenAuth }) => {
                 inputMode="numeric"
                 value={initialBalanceStr ? parseInt(initialBalanceStr, 10).toLocaleString('id-ID') : ''}
                 onChange={(e) => setInitialBalanceStr(e.target.value.replace(/[^\d]/g, ''))}
-                placeholder="1.500.000"
+                placeholder="0"
                 className="w-full pl-11 pr-4 py-2.5 bg-[#FAF8F5] dark:bg-[#1C1A18] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl text-base font-mono font-bold text-stone-900 dark:text-[#F2EFE9] focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]/20 focus:border-[#2D6A4F] tabular-nums transition-all"
                 required
               />

@@ -59,6 +59,11 @@ export function addDaysToDate(startDateStr: string, daysInclusive: number): stri
   return `${y}-${m}-${d}`;
 }
 
+export function isDatePast(dateStr: string, fromDateStr = getTodayDateString()): boolean {
+  if (!dateStr) return false;
+  return fromDateStr > dateStr;
+}
+
 /**
  * Returns remaining days from a reference date (defaults to today) until endDate, inclusive of reference day.
  */

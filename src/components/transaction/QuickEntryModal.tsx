@@ -321,10 +321,10 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
       title="Catat Transaksi"
       subtitle={
         activeTab === 'MULTI'
-          ? 'Rekap pengeluaran sekaligus dari catatan teks atau tabel'
+          ? 'Input tabel sekaligus atau tempel catatan'
           : singleType === 'INCOME'
-          ? 'Pemasukan akan menambah saldo kas dan menaikkan jatah belanja harianmu'
-          : 'Pengeluaran akan langsung memperbarui jatah belanja harianmu'
+          ? 'Tambah saldo kas harian'
+          : 'Catat pengeluaran harian'
       }
       maxWidth={activeTab === 'MULTI' ? '5xl' : 'md'}
     >
@@ -480,7 +480,7 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                   </label>
                   <input
                     type="text"
-                    placeholder="Contoh: Tambahan jajan mama, fee project kampus, jual buku"
+                    placeholder="Keterangan (opsional)"
                     value={singleNote}
                     onChange={(e) => setSingleNote(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-[#FAF8F5] dark:bg-[#1C1A18] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl text-xs sm:text-sm text-stone-900 dark:text-[#F2EFE9] placeholder-stone-400 dark:placeholder-stone-600 focus:outline-none focus:border-[#2D6A4F] dark:focus:border-[#42B07E]"
@@ -719,7 +719,7 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                   </label>
                   <input
                     type="text"
-                    placeholder="Contoh: Tissue Paseo, Nasi padang, Bensin"
+                    placeholder="Nama barang (opsional)"
                     value={singleNote}
                     onChange={(e) => setSingleNote(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-[#FAF8F5] dark:bg-[#1C1A18] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl text-xs sm:text-sm text-stone-900 dark:text-[#F2EFE9] placeholder-stone-400 dark:placeholder-stone-600 focus:outline-none focus:border-[#2D6A4F] dark:focus:border-[#42B07E]"
@@ -864,13 +864,13 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                     <p className="text-xs text-stone-500 dark:text-stone-400 flex items-center gap-1.5 font-medium">
                       <Info className="w-3.5 h-3.5 text-stone-400 dark:text-stone-500 shrink-0" />
                       <span>
-                        Format yang didukung: tanggal (misal <i>20 sep</i>), ribuan (<i>40 = 40rb</i>), dan jumlah (<i>Tissue (3) 24</i>).
+                        Format: nama dan harga (misal: <i>Nasi 20</i>, <i>Bensin 25rb</i>).
                       </span>
                     </p>
                   </div>
                   <textarea
-                    rows={5}
-                    placeholder={`20 sep\nSabun muka 40\nSikat gigi 18\nTissue (3) 24\n\n21 sep\nNasi padang 20\nBensin 25`}
+                    rows={4}
+                    placeholder={`Nasi padang 20\nBensin 25\nSabun 15`}
                     value={pasteText}
                     onChange={(e) => setPasteText(e.target.value)}
                     className="w-full p-3 text-xs font-mono bg-white dark:bg-[#23211E] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl text-stone-900 dark:text-[#F2EFE9] placeholder-stone-400 dark:placeholder-stone-600 focus:outline-none focus:border-[#2D6A4F]"
@@ -938,7 +938,7 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                           <td className="py-2 px-3">
                             <input
                               type="text"
-                              placeholder="Misal: Tissue, Nasi, Bensin"
+                              placeholder="Nama barang"
                               value={row.note}
                               onChange={(e) => handleUpdateRow(row.id, 'note', e.target.value)}
                               className="w-full px-2.5 py-1 text-xs bg-stone-50 dark:bg-[#282622] border border-[#E7E3DA] dark:border-[#38342F] rounded-lg text-stone-900 dark:text-[#F2EFE9] placeholder-stone-400 dark:placeholder-stone-600 focus:outline-none focus:border-[#2D6A4F]"

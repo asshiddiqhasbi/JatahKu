@@ -5,6 +5,7 @@ import { DEFAULT_EMERGENCY_BUFFER } from '../constants/presets';
 
 const STORAGE_KEYS = {
   ACTIVE_CYCLE: 'jatahku_active_cycle_v2',
+  ALL_CYCLES: 'jatahku_all_cycles_v2',
   TRANSACTIONS: 'jatahku_transactions_v2',
   HAS_ONBOARDED: 'jatahku_has_onboarded_v2',
 };
@@ -34,6 +35,25 @@ export function saveActiveCycle(cycle: BudgetCycle | null): void {
   }
 }
 
+export function getStoredAllCycles(): BudgetCycle[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.ALL_CYCLES);
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error('Failed to load all cycles from localStorage', e);
+    return [];
+  }
+}
+
+export function saveAllCycles(cycles: BudgetCycle[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.ALL_CYCLES, JSON.stringify(cycles));
+  } catch (e) {
+    console.error('Failed to save all cycles', e);
+  }
+}
+
 export function getStoredTransactions(): Transaction[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
@@ -56,6 +76,7 @@ export function saveTransactions(transactions: Transaction[]): void {
 export function clearAllStoredData(): void {
   try {
     localStorage.removeItem(STORAGE_KEYS.ACTIVE_CYCLE);
+    localStorage.removeItem(STORAGE_KEYS.ALL_CYCLES);
     localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS);
     localStorage.removeItem(STORAGE_KEYS.HAS_ONBOARDED);
   } catch (e) {

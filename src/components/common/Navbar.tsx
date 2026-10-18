@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Plus,
   Download,
-  Calendar,
   Wallet,
   Sun,
   Moon,
@@ -18,18 +17,18 @@ import { formatShortDate } from '../../utils/dateUtils';
 
 interface NavbarProps {
   onOpenQuickEntry: () => void;
-  onOpenCycleConfig: () => void;
+  onOpenCycleHistory: () => void;
   onOpenExport: () => void;
   onOpenAuth?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   onOpenQuickEntry,
-  onOpenCycleConfig,
+  onOpenCycleHistory,
   onOpenExport,
   onOpenAuth,
 }) => {
-  const { cycle, metrics, user, isSyncing, signOut } = useBudget();
+  const { cycle, user, isSyncing, signOut, isViewingArchived } = useBudget();
   const { isDark, toggleTheme } = useTheme();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -50,7 +49,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="sticky top-0 z-30 w-full border-b border-[#E7E3DA] dark:border-[#332F2B] bg-[#FAF8F5]/90 dark:bg-[#191816]/90 backdrop-blur-md transition-colors">
       <div className="max-w-5xl mx-auto px-3 sm:px-6 h-14 sm:h-15 flex items-center justify-between gap-2 sm:gap-3">
-        {/* Brand */}
+        {/* Brand & Period Selector Pill */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             <div className="w-8 h-8 rounded-xl bg-[#2D6A4F] text-white flex items-center justify-center shadow-xs">
@@ -74,18 +73,27 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* Cycle Range Indicator (tablet/desktop) */}
+          {/* Period Selector Pill */}
           <button
-            onClick={onOpenCycleConfig}
-            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs text-stone-700 dark:text-stone-300 bg-[#F4F1EA] dark:bg-[#23211E] hover:bg-[#ECE8DD] dark:hover:bg-[#2C2925] border border-[#E7E3DA] dark:border-[#332F2B] rounded-xl transition-colors ml-2"
-            title="Klik untuk ubah uang saku atau tanggal"
+            type="button"
+            onClick={onOpenCycleHistory}
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs rounded-xl border transition-all ml-1 sm:ml-2 ${
+              isViewingArchived
+                ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 border-amber-200 dark:border-amber-800'
+                : 'bg-[#F4F1EA] dark:bg-[#23211E] hover:bg-[#ECE8DD] dark:hover:bg-[#2C2925] text-stone-700 dark:text-stone-300 border-[#E7E3DA] dark:border-[#38342F]'
+            }`}
+            title="Kelola & riwayat periode"
           >
-            <Calendar className="w-3.5 h-3.5 text-stone-400" />
-            <span>
-              {formatShortDate(cycle.startDate)} s/d {formatShortDate(cycle.endDate)}
+            {isViewingArchived ? (
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+            ) : (
+              <span className="w-1.5 h-1.5 rounded-full bg-[#2D6A4F] dark:bg-[#42B07E] shrink-0" />
+            )}
+            <span className="font-semibold truncate max-w-[95px] sm:max-w-none">
+              {isViewingArchived ? 'Arsip: ' : ''}
+              {formatShortDate(cycle.startDate)} - {formatShortDate(cycle.endDate)}
             </span>
-            <span className="text-stone-300 dark:text-stone-600">•</span>
-            <span className="text-[#2D6A4F] dark:text-[#42B07E] font-bold">{metrics.daysRemaining} hari tersisa</span>
+            <ChevronDown className="w-3 h-3 text-stone-400 shrink-0" />
           </button>
         </div>
 
@@ -139,7 +147,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           ) : (
             <button
               onClick={onOpenAuth}
-              className="flex items-center gap-1.5 p-2 sm:px-3 sm:py-2 text-xs font-semibold text-stone-700 dark:text-stone-300 bg-white dark:bg-[#23211E] hover:bg-[#F6F3EC] dark:hover:bg-[#2C2925] border border-[#E7E3DA] dark:border-[#332F2B] rounded-xl transition-colors shadow-2xs"
+              className="flex items-center gap-1.5 p-2 sm:px-3 sm:py-2 text-xs font-semibold text-stone-700 dark:text-stone-300 bg-white dark:bg-[#23211E] hover:bg-[#F6F3EC] dark:hover:bg-[#2C2925] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl transition-colors shadow-2xs"
               title="Masuk atau Buat Akun untuk menyimpan catatan dan sinkronkan ke HP"
             >
               <Cloud className="w-3.5 h-3.5 text-stone-400" />
@@ -150,26 +158,17 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Theme Toggle Button */}
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-xl text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white bg-white dark:bg-[#23211E] hover:bg-[#F4F1EA] dark:hover:bg-[#2C2925] border border-[#E7E3DA] dark:border-[#332F2B] transition-colors shadow-2xs"
+            className="p-2 rounded-xl text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white bg-white dark:bg-[#23211E] hover:bg-[#F4F1EA] dark:hover:bg-[#2C2925] border border-[#E7E3DA] dark:border-[#38342F] transition-colors shadow-2xs"
             title={isDark ? 'Ganti ke Mode Terang Hangat' : 'Ganti ke Mode Gelap Hangat'}
             aria-label="Toggle theme"
           >
             {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-stone-600" />}
           </button>
 
-          {/* Quick cycle button on mobile */}
-          <button
-            onClick={onOpenCycleConfig}
-            className="md:hidden p-2 rounded-xl text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-[#F4F1EA] dark:hover:bg-[#23211E] border border-[#E7E3DA] dark:border-[#332F2B]"
-            title="Pengaturan Anggaran"
-          >
-            <Calendar className="w-4 h-4" />
-          </button>
-
           {/* Export Center */}
           <button
             onClick={onOpenExport}
-            className="flex items-center gap-1.5 p-2 sm:px-3 sm:py-2 text-xs font-semibold text-stone-700 dark:text-stone-300 bg-white dark:bg-[#23211E] hover:bg-[#F6F3EC] dark:hover:bg-[#2C2925] border border-[#E7E3DA] dark:border-[#332F2B] rounded-xl transition-colors shadow-2xs"
+            className="flex items-center gap-1.5 p-2 sm:px-3 sm:py-2 text-xs font-semibold text-stone-700 dark:text-stone-300 bg-white dark:bg-[#23211E] hover:bg-[#F6F3EC] dark:hover:bg-[#2C2925] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl transition-colors shadow-2xs"
             title="Laporan Pertanggungjawaban Resmi"
           >
             <Download className="w-3.5 h-3.5 text-stone-500 dark:text-stone-400" />

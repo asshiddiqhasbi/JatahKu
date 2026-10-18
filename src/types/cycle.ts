@@ -7,6 +7,8 @@ export interface BudgetCycle {
   emergencyBuffer: number; // Dana cadangan darurat tak tersentuh (Rp)
   notes?: string;
   createdAt: string;
+  isCompleted?: boolean;
+  completedAt?: string;
 }
 
 export type HealthStatus = 'SAFE' | 'WARNING' | 'CRITICAL';

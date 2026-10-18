@@ -1,17 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, Calendar, Shield } from 'lucide-react';
+import { Trash2, Calendar, Shield, Sparkles } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { useBudget } from '../../context/BudgetContext';
 import { parseRawNumber, formatIDR } from '../../utils/currency';
-import { getInclusiveDays, addDaysToDate } from '../../utils/dateUtils';
+import { getInclusiveDays, addDaysToDate, getTodayDateString } from '../../utils/dateUtils';
 
 interface CycleConfigModalProps {
   isOpen: boolean;
   onClose: () => void;
+  isNewCycle?: boolean;
+  carryOverAmount?: number;
 }
 
-export const CycleConfigModal: React.FC<CycleConfigModalProps> = ({ isOpen, onClose }) => {
-  const { cycle, updateCycle, resetAllData } = useBudget();
+export const CycleConfigModal: React.FC<CycleConfigModalProps> = ({
+  isOpen,
+  onClose,
+  isNewCycle = false,
+  carryOverAmount = 0,
+}) => {
+  const { cycle, updateCycle, setupNewCycle, resetAllData } = useBudget();
 
   const [userName, setUserName] = useState(cycle?.userName || '');
   const [initialBalanceStr, setInitialBalanceStr] = useState((cycle?.initialBalance || 0).toString());
@@ -22,16 +29,26 @@ export const CycleConfigModal: React.FC<CycleConfigModalProps> = ({ isOpen, onCl
   const [endDate, setEndDate] = useState(cycle?.endDate || '');
 
   useEffect(() => {
-    if (isOpen && cycle) {
-      setUserName(cycle.userName || '');
-      setInitialBalanceStr(cycle.initialBalance.toString());
-      setEmergencyBufferStr((cycle.emergencyBuffer || 0).toString());
-      setStartDate(cycle.startDate);
-      setEndDate(cycle.endDate);
+    if (isOpen) {
+      if (isNewCycle) {
+        const today = getTodayDateString();
+        const defaultEnd = addDaysToDate(today, 30);
+        setUserName(cycle?.userName || '');
+        setInitialBalanceStr((cycle?.initialBalance || 1500000).toString());
+        setEmergencyBufferStr((cycle?.emergencyBuffer || 150000).toString());
+        setStartDate(today);
+        setEndDate(defaultEnd);
+      } else if (cycle) {
+        setUserName(cycle.userName || '');
+        setInitialBalanceStr(cycle.initialBalance.toString());
+        setEmergencyBufferStr((cycle.emergencyBuffer || 0).toString());
+        setStartDate(cycle.startDate);
+        setEndDate(cycle.endDate);
+      }
     }
-  }, [isOpen, cycle]);
+  }, [isOpen, cycle, isNewCycle]);
 
-  if (!cycle) return null;
+  if (!cycle && !isNewCycle) return null;
 
   const initialBalance = parseRawNumber(initialBalanceStr);
   const emergencyBuffer = parseRawNumber(emergencyBufferStr);
@@ -49,13 +66,28 @@ export const CycleConfigModal: React.FC<CycleConfigModalProps> = ({ isOpen, onCl
     e.preventDefault();
     if (initialBalance <= 0 || !startDate || !endDate) return;
 
-    updateCycle({
-      userName: userName.trim() || 'Mahasiswa',
-      initialBalance,
-      emergencyBuffer,
-      startDate,
-      endDate,
-    });
+    if (isNewCycle) {
+      setupNewCycle(
+        {
+          id: `cycle-${Date.now()}`,
+          userName: userName.trim() || 'Mahasiswa',
+          initialBalance,
+          emergencyBuffer,
+          startDate,
+          endDate,
+          createdAt: new Date().toISOString(),
+        },
+        carryOverAmount
+      );
+    } else {
+      updateCycle({
+        userName: userName.trim() || 'Mahasiswa',
+        initialBalance,
+        emergencyBuffer,
+        startDate,
+        endDate,
+      });
+    }
 
     onClose();
   };
@@ -71,11 +103,25 @@ export const CycleConfigModal: React.FC<CycleConfigModalProps> = ({ isOpen, onCl
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Pengaturan Uang Saku & Siklus"
-      subtitle="Sesuaikan total uang saku, tabungan cadangan, atau ganti tanggal periode"
+      title={isNewCycle ? 'Mulai Periode Baru' : 'Pengaturan Uang Saku & Siklus'}
+      subtitle={
+        isNewCycle
+          ? 'Atur uang saku dan durasi untuk periode belanja berikutnya'
+          : 'Atur saldo awal, tabungan cadangan, atau tanggal periode'
+      }
       maxWidth="md"
     >
       <form onSubmit={handleSave} className="space-y-4">
+        {/* Carry-over banner if applicable */}
+        {isNewCycle && carryOverAmount > 0 && (
+          <div className="p-3 bg-[#E8F5E9] dark:bg-[#1A2E22] border border-[#C8E6C9] dark:border-[#2A4736] rounded-xl flex items-center gap-2.5 text-xs text-[#2D6A4F] dark:text-[#76CEA2]">
+            <Sparkles className="w-4 h-4 shrink-0" />
+            <span>
+              Membawa sisa saldo <strong>{formatIDR(carryOverAmount)}</strong> dari periode lalu sebagai pemasukan awal kas.
+            </span>
+          </div>
+        )}
+
         {/* User Name */}
         <div>
           <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
@@ -83,7 +129,7 @@ export const CycleConfigModal: React.FC<CycleConfigModalProps> = ({ isOpen, onCl
           </label>
           <input
             type="text"
-            placeholder="Contoh: Hasbi"
+            placeholder="Nama panggilan"
             value={userName}
             onChange={(e) => setUserName(e.target.value)}
             className="w-full px-3.5 py-2.5 bg-[#FAF8F5] dark:bg-[#1C1A18] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl text-xs sm:text-sm text-stone-900 dark:text-[#F2EFE9] placeholder-stone-400 dark:placeholder-stone-600 focus:outline-none focus:border-[#2D6A4F] dark:focus:border-[#42B07E]"
@@ -104,7 +150,7 @@ export const CycleConfigModal: React.FC<CycleConfigModalProps> = ({ isOpen, onCl
               inputMode="numeric"
               value={initialBalanceStr ? parseInt(initialBalanceStr, 10).toLocaleString('id-ID') : ''}
               onChange={(e) => setInitialBalanceStr(e.target.value.replace(/[^\d]/g, ''))}
-              placeholder="1.500.000"
+              placeholder="0"
               className="w-full pl-11 pr-3.5 py-2.5 bg-[#FAF8F5] dark:bg-[#1C1A18] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl text-sm font-mono font-bold text-stone-900 dark:text-[#F2EFE9] focus:outline-none focus:border-[#2D6A4F] dark:focus:border-[#42B07E]"
               required
             />
@@ -129,7 +175,7 @@ export const CycleConfigModal: React.FC<CycleConfigModalProps> = ({ isOpen, onCl
               inputMode="numeric"
               value={emergencyBufferStr ? parseInt(emergencyBufferStr, 10).toLocaleString('id-ID') : ''}
               onChange={(e) => setEmergencyBufferStr(e.target.value.replace(/[^\d]/g, ''))}
-              placeholder="150.000"
+              placeholder="0"
               className="w-full pl-11 pr-3.5 py-2.5 bg-[#FAF8F5] dark:bg-[#1C1A18] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl text-sm font-mono font-semibold text-stone-900 dark:text-[#F2EFE9] focus:outline-none focus:border-[#2D6A4F] dark:focus:border-[#42B07E]"
             />
           </div>
@@ -219,15 +265,19 @@ export const CycleConfigModal: React.FC<CycleConfigModalProps> = ({ isOpen, onCl
 
         {/* Action Buttons */}
         <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-          <button
-            type="button"
-            onClick={handleResetData}
-            className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors border border-transparent hover:border-rose-100 dark:hover:border-rose-900/40"
-            title="Hapus semua data dan mulai ulang"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Reset Semua Data</span>
-          </button>
+          {!isNewCycle ? (
+            <button
+              type="button"
+              onClick={handleResetData}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors border border-transparent hover:border-rose-100 dark:hover:border-rose-900/40"
+              title="Hapus semua data dan mulai ulang"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Reset Semua Data</span>
+            </button>
+          ) : (
+            <div />
+          )}
 
           <div className="flex items-center gap-2 justify-end">
             <button
@@ -241,7 +291,7 @@ export const CycleConfigModal: React.FC<CycleConfigModalProps> = ({ isOpen, onCl
               type="submit"
               className="px-4 py-2 text-xs font-semibold rounded-xl bg-[#2D6A4F] hover:bg-[#23563F] text-white shadow-xs transition-colors"
             >
-              Simpan Perubahan
+              {isNewCycle ? 'Mulai Periode Baru' : 'Simpan Perubahan'}
             </button>
           </div>
         </div>

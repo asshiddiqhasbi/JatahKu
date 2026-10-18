@@ -120,7 +120,7 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="Edit Transaksi"
-      subtitle="Perbaiki kesalahan input kategori, harga, jumlah, atau tanggal"
+      subtitle="Perbaiki input harga, jumlah, kategori, atau tanggal"
       maxWidth="lg"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -383,7 +383,7 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
           </label>
           <input
             type="text"
-            placeholder="Contoh: Nasi padang, Bensin Pertalite, Laundry"
+            placeholder="Nama barang (opsional)"
             value={note}
             onChange={(e) => setNote(e.target.value)}
             className="w-full px-3.5 py-2.5 bg-[#FAF8F5] dark:bg-[#1C1A18] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl text-xs sm:text-sm text-stone-900 dark:text-[#F2EFE9] placeholder-stone-400 dark:placeholder-stone-600 focus:outline-none focus:border-[#2D6A4F] dark:focus:border-[#42B07E]"

@@ -10,14 +10,22 @@ import { CategoryBreakdown } from './components/dashboard/CategoryBreakdown';
 import { TransactionLedger } from './components/transaction/TransactionLedger';
 import { QuickEntryModal } from './components/transaction/QuickEntryModal';
 import { CycleConfigModal } from './components/cycle/CycleConfigModal';
+import { CycleHistoryModal } from './components/cycle/CycleHistoryModal';
+import { PeriodSummaryModal } from './components/cycle/PeriodSummaryModal';
 import { ExportCenterModal } from './components/export/ExportCenterModal';
 import { AuthModal } from './components/auth/AuthModal';
+import type { BudgetCycle } from './types/cycle';
 
 const DashboardContent: React.FC = () => {
   const { isOnboarded, isInitializing, isDemo, loadSampleData } = useBudget();
 
   const [isQuickEntryOpen, setIsQuickEntryOpen] = useState(false);
   const [isCycleConfigOpen, setIsCycleConfigOpen] = useState(false);
+  const [isCycleHistoryOpen, setIsCycleHistoryOpen] = useState(false);
+  const [isPeriodSummaryOpen, setIsPeriodSummaryOpen] = useState(false);
+  const [summaryTargetCycle, setSummaryTargetCycle] = useState<BudgetCycle | null>(null);
+  const [isNewCycleMode, setIsNewCycleMode] = useState(false);
+  const [newCycleCarryOver, setNewCycleCarryOver] = useState<number>(0);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
@@ -33,6 +41,8 @@ const DashboardContent: React.FC = () => {
         target.isContentEditable ||
         isQuickEntryOpen ||
         isCycleConfigOpen ||
+        isCycleHistoryOpen ||
+        isPeriodSummaryOpen ||
         isExportOpen
       ) {
         return;
@@ -46,7 +56,7 @@ const DashboardContent: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOnboarded, isQuickEntryOpen, isCycleConfigOpen, isExportOpen]);
+  }, [isOnboarded, isQuickEntryOpen, isCycleConfigOpen, isCycleHistoryOpen, isPeriodSummaryOpen, isExportOpen]);
 
   // Layar loading saat inisialisasi sesi login awal agar tidak ada flash onboarding
   if (isInitializing) {
@@ -77,12 +87,24 @@ const DashboardContent: React.FC = () => {
     );
   }
 
+  const handleOpenNewCycleSetup = (carryOver = 0) => {
+    setIsNewCycleMode(true);
+    setNewCycleCarryOver(carryOver);
+    setIsCycleConfigOpen(true);
+  };
+
+  const handleOpenActiveCycleConfig = () => {
+    setIsNewCycleMode(false);
+    setNewCycleCarryOver(0);
+    setIsCycleConfigOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-[#FAF8F5] dark:bg-[#191816] text-stone-900 dark:text-[#F2EFE9] flex flex-col font-sans selection:bg-amber-100 dark:selection:bg-[#3D3833] selection:text-amber-950 dark:selection:text-[#F2EFE9] transition-colors w-full max-w-full overflow-x-hidden">
       {/* Navbar */}
       <Navbar
         onOpenQuickEntry={() => setIsQuickEntryOpen(true)}
-        onOpenCycleConfig={() => setIsCycleConfigOpen(true)}
+        onOpenCycleHistory={() => setIsCycleHistoryOpen(true)}
         onOpenExport={() => setIsExportOpen(true)}
         onOpenAuth={() => setIsAuthModalOpen(true)}
       />
@@ -132,7 +154,11 @@ const DashboardContent: React.FC = () => {
         <section aria-label="Jatah Harian Utama">
           <RunwayHero
             onOpenQuickEntry={() => setIsQuickEntryOpen(true)}
-            onOpenCycleConfig={() => setIsCycleConfigOpen(true)}
+            onOpenCycleConfig={handleOpenActiveCycleConfig}
+            onOpenPeriodSummary={() => {
+              setSummaryTargetCycle(null);
+              setIsPeriodSummaryOpen(true);
+            }}
           />
         </section>
 
@@ -169,7 +195,7 @@ const DashboardContent: React.FC = () => {
           JatahKu : Catatan Jatah Harian & Uang Saku Mahasiswa
         </p>
         <p className="mt-1 text-[11px] text-stone-400 dark:text-stone-500">
-          Data 100% tersimpan aman di browser pribadi Anda • Bebas pelacak atau server luar
+          Data tersimpan aman di browser pribadi Anda • Sinkronisasi otomatis saat terhubung akun
         </p>
       </footer>
 
@@ -180,7 +206,31 @@ const DashboardContent: React.FC = () => {
       />
       <CycleConfigModal
         isOpen={isCycleConfigOpen}
-        onClose={() => setIsCycleConfigOpen(false)}
+        onClose={() => {
+          setIsCycleConfigOpen(false);
+          setIsNewCycleMode(false);
+        }}
+        isNewCycle={isNewCycleMode}
+        carryOverAmount={newCycleCarryOver}
+      />
+      <CycleHistoryModal
+        isOpen={isCycleHistoryOpen}
+        onClose={() => setIsCycleHistoryOpen(false)}
+        onOpenPeriodSummary={(target) => {
+          setSummaryTargetCycle(target || null);
+          setIsPeriodSummaryOpen(true);
+        }}
+        onOpenNewCycleSetup={() => handleOpenNewCycleSetup(0)}
+        onOpenCycleConfig={handleOpenActiveCycleConfig}
+      />
+      <PeriodSummaryModal
+        isOpen={isPeriodSummaryOpen}
+        onClose={() => {
+          setIsPeriodSummaryOpen(false);
+          setSummaryTargetCycle(null);
+        }}
+        targetCycle={summaryTargetCycle}
+        onStartNewCycle={(carryOver) => handleOpenNewCycleSetup(carryOver || 0)}
       />
       <ExportCenterModal
         isOpen={isExportOpen}

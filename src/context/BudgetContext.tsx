@@ -8,6 +8,8 @@ import { supabase } from '../lib/supabase';
 import {
   getStoredActiveCycle,
   saveActiveCycle,
+  getStoredAllCycles,
+  saveAllCycles,
   getStoredTransactions,
   saveTransactions,
   clearAllStoredData,
@@ -16,6 +18,7 @@ import {
   exportDataAsJSON,
 } from '../utils/storage';
 import { calculateRunway, calculateCategorySummaries } from '../utils/runwayCalculator';
+import { getTodayDateString } from '../utils/dateUtils';
 
 interface BudgetContextType {
   user: User | null;
@@ -23,6 +26,8 @@ interface BudgetContextType {
   isSyncing: boolean;
   isInitializing: boolean;
   cycle: BudgetCycle | null;
+  cycles: BudgetCycle[];
+  isViewingArchived: boolean;
   isOnboarded: boolean;
   transactions: Transaction[];
   metrics: RunwayMetrics;
@@ -34,7 +39,9 @@ interface BudgetContextType {
   bulkMoveTransactionsDate: (oldDate: string, newDate: string) => Promise<void>;
   bulkDeleteTransactionsByDate: (date: string) => Promise<void>;
   updateCycle: (updates: Partial<BudgetCycle>) => Promise<void>;
-  setupNewCycle: (newCycle: BudgetCycle) => Promise<void>;
+  setupNewCycle: (newCycle: BudgetCycle, carryOverAmount?: number) => Promise<void>;
+  completeCurrentCycle: () => Promise<void>;
+  switchCycle: (cycleId: string) => Promise<void>;
   backupData: () => void;
   restoreData: (cycle: BudgetCycle, transactions: Transaction[]) => Promise<void> | void;
   loadSampleData: () => void;
@@ -81,6 +88,14 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
 
   // Jika belum ada data lokal, muat data simulasi contoh untuk mode demo
+  const [cycles, setCycles] = useState<BudgetCycle[]>(() => {
+    const storedList = getStoredAllCycles();
+    if (storedList && storedList.length > 0) return storedList;
+    const stored = getStoredActiveCycle();
+    if (stored) return [stored];
+    return [createSampleCycle()];
+  });
+
   const [cycle, setCycle] = useState<BudgetCycle | null>(() => {
     const stored = getStoredActiveCycle();
     if (stored) return stored;
@@ -96,18 +111,18 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const isDemo = user === null;
 
-  // Local storage persistence: hanya disimpan jika user sudah login (sebagai offline cache)
+  // Local storage persistence: selalu simpan agar transisi lancar
   useEffect(() => {
-    if (user) {
-      saveActiveCycle(cycle);
-    }
-  }, [cycle, user]);
+    saveActiveCycle(cycle);
+  }, [cycle]);
 
   useEffect(() => {
-    if (user) {
-      saveTransactions(transactions);
-    }
-  }, [transactions, user]);
+    saveAllCycles(cycles);
+  }, [cycles]);
+
+  useEffect(() => {
+    saveTransactions(transactions);
+  }, [transactions]);
 
   // Pantau sesi login Supabase saat aplikasi dibuka
   useEffect(() => {
@@ -200,38 +215,47 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const syncFromCloud = async (currentUser: User) => {
     setIsSyncing(true);
     try {
-      // 1. Ambil siklus anggaran terbaru milik pengguna
+      // 1. Ambil seluruh siklus anggaran milik pengguna
       const { data: cloudCycles, error: cycleErr } = await supabase
         .from('cycles')
         .select('*')
         .eq('user_id', currentUser.id)
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .order('created_at', { ascending: false });
 
       if (cycleErr) throw cycleErr;
 
       if (cloudCycles && cloudCycles.length > 0) {
-        const activeCycleRow = cloudCycles[0];
-        const activeCloudCycle: BudgetCycle = {
-          id: activeCycleRow.id,
+        const mappedCycles: BudgetCycle[] = cloudCycles.map((row) => ({
+          id: row.id,
           userName:
-            activeCycleRow.user_name ||
+            row.user_name ||
             (currentUser.user_metadata?.full_name as string) ||
             '',
-          initialBalance: Number(activeCycleRow.initial_balance),
-          startDate: activeCycleRow.start_date,
-          endDate: activeCycleRow.end_date,
-          emergencyBuffer: Number(activeCycleRow.emergency_buffer || 0),
-          notes: activeCycleRow.notes || undefined,
-          createdAt: activeCycleRow.created_at || new Date().toISOString(),
-        };
+          initialBalance: Number(row.initial_balance),
+          startDate: row.start_date,
+          endDate: row.end_date,
+          emergencyBuffer: Number(row.emergency_buffer || 0),
+          notes: row.notes || undefined,
+          createdAt: row.created_at || new Date().toISOString(),
+          isCompleted: !!row.notes?.includes('[STATUS:COMPLETED]'),
+        }));
 
-        // 2. Ambil transaksi HANYA untuk siklus yang sedang aktif
+        setCycles(mappedCycles);
+
+        // Gunakan siklus yang cocok jika sudah terpilih, atau siklus pertama (terbaru)
+        const targetCycle =
+          cycle && mappedCycles.some((c) => c.id === cycle.id)
+            ? mappedCycles.find((c) => c.id === cycle.id)!
+            : mappedCycles[0];
+
+        setCycle(targetCycle);
+
+        // 2. Ambil transaksi HANYA untuk siklus yang dipilih
         const { data: cloudTx, error: txErr } = await supabase
           .from('transactions')
           .select('*')
           .eq('user_id', currentUser.id)
-          .eq('cycle_id', activeCycleRow.id)
+          .eq('cycle_id', targetCycle.id)
           .order('date', { ascending: false });
 
         if (txErr) throw txErr;
@@ -250,7 +274,6 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           createdAt: t.created_at,
         }));
 
-        setCycle(activeCloudCycle);
         setTransactions(activeCloudTx);
       } else {
         // Jika di cloud belum ada data tapi di lokal sudah ada data, migrasikan ke cloud
@@ -299,6 +322,13 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   const isOnboarded = cycle !== null;
+
+  const isViewingArchived = useMemo(() => {
+    if (!cycle) return false;
+    if (cycle.isCompleted) return true;
+    if (cycles.length > 0 && cycle.id !== cycles[0].id) return true;
+    return false;
+  }, [cycle, cycles]);
 
   const metrics = useMemo(() => {
     if (!cycle) return emptyMetrics;
@@ -460,6 +490,7 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     if (!cycle) return;
     const updated = { ...cycle, ...updates };
     setCycle(updated);
+    setCycles((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
 
     if (user) {
       try {
@@ -482,9 +513,27 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   };
 
-  const setupNewCycle = async (newCycle: BudgetCycle) => {
+  const setupNewCycle = async (newCycle: BudgetCycle, carryOverAmount?: number) => {
     setCycle(newCycle);
-    setTransactions([]);
+    setCycles((prev) => [newCycle, ...prev.filter((c) => c.id !== newCycle.id)]);
+
+    let initialTxList: Transaction[] = [];
+    if (carryOverAmount && carryOverAmount > 0) {
+      const carryOverTx: Transaction = {
+        id: `tx-${Date.now()}`,
+        cycleId: newCycle.id,
+        date: newCycle.startDate,
+        type: 'INCOME',
+        category: 'Lainnya',
+        source: 'Sisa Periode Lalu',
+        amount: carryOverAmount,
+        qty: 1,
+        note: 'Sisa saldo dari periode sebelumnya',
+        createdAt: new Date().toISOString(),
+      };
+      initialTxList = [carryOverTx];
+    }
+    setTransactions(initialTxList);
 
     if (user) {
       try {
@@ -498,9 +547,110 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           emergency_buffer: newCycle.emergencyBuffer || 0,
           notes: newCycle.notes || null,
         });
+
+        if (initialTxList.length > 0) {
+          await supabase.from('transactions').insert(
+            initialTxList.map((tx) => ({
+              id: tx.id,
+              user_id: user.id,
+              cycle_id: tx.cycleId,
+              date: tx.date,
+              type: tx.type,
+              category: tx.category,
+              amount: tx.amount,
+              qty: tx.qty || 1,
+              source: tx.source || null,
+              note: tx.note,
+            }))
+          );
+        }
       } catch (e) {
         console.error('Gagal simpan siklus baru ke Supabase:', e);
       }
+    }
+  };
+
+  const completeCurrentCycle = async () => {
+    if (!cycle) return;
+    const todayStr = getTodayDateString();
+    // Jika selesai lebih awal dari jadwal, sesuaikan tanggal akhir ke hari ini
+    const finalEndDate = todayStr < cycle.endDate ? todayStr : cycle.endDate;
+    const existingNotes = (cycle.notes || '').replace('[STATUS:COMPLETED]', '').trim();
+    const updatedNotes = existingNotes
+      ? `${existingNotes} [STATUS:COMPLETED]`
+      : '[STATUS:COMPLETED]';
+
+    const updatedCycle: BudgetCycle = {
+      ...cycle,
+      endDate: finalEndDate,
+      isCompleted: true,
+      completedAt: new Date().toISOString(),
+      notes: updatedNotes,
+    };
+
+    setCycle(updatedCycle);
+    setCycles((prev) =>
+      prev.map((c) => (c.id === updatedCycle.id ? updatedCycle : c))
+    );
+
+    if (user) {
+      try {
+        await supabase
+          .from('cycles')
+          .update({
+            end_date: finalEndDate,
+            notes: updatedNotes,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', updatedCycle.id)
+          .eq('user_id', user.id);
+      } catch (e) {
+        console.error('Gagal menyelesaikan siklus di Supabase:', e);
+      }
+    }
+  };
+
+  const switchCycle = async (cycleId: string) => {
+    const target = cycles.find((c) => c.id === cycleId);
+    if (!target) return;
+
+    setCycle(target);
+
+    if (user) {
+      setIsSyncing(true);
+      try {
+        const { data: cloudTx, error: txErr } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('cycle_id', target.id)
+          .order('date', { ascending: false });
+
+        if (!txErr && cloudTx) {
+          const mappedTx: Transaction[] = cloudTx.map((t) => ({
+            id: t.id,
+            cycleId: t.cycle_id,
+            date: t.date,
+            type: t.type as 'EXPENSE' | 'INCOME',
+            category: t.category,
+            amount: Number(t.amount),
+            qty: t.qty ? Number(t.qty) : 1,
+            unitPrice: t.unit_price ? Number(t.unit_price) : undefined,
+            source: t.source || undefined,
+            note: t.note,
+            createdAt: t.created_at,
+          }));
+          setTransactions(mappedTx);
+        }
+      } catch (e) {
+        console.error('Gagal mengambil transaksi siklus dari Supabase:', e);
+      } finally {
+        setIsSyncing(false);
+      }
+    } else {
+      const allTx = getStoredTransactions();
+      const filtered = allTx.filter((t) => t.cycleId === target.id);
+      setTransactions(filtered);
     }
   };
 
@@ -510,6 +660,7 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     clearAllStoredData();
     // Kembalikan ke mode demo simulasi
     const sample = createSampleCycle();
+    setCycles([sample]);
     setCycle(sample);
     setTransactions(createSampleTransactions(sample.id));
   };
@@ -527,6 +678,7 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const restoreData = async (newCycle: BudgetCycle, newTransactions: Transaction[]) => {
     setCycle(newCycle);
+    setCycles((prev) => [newCycle, ...prev.filter((c) => c.id !== newCycle.id)]);
     setTransactions(newTransactions);
 
     // Jika sedang login, simpan langsung hasil restore ke database Supabase
@@ -569,6 +721,7 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const loadSampleData = () => {
     const sampleCycle = createSampleCycle();
     const sampleTx = createSampleTransactions(sampleCycle.id);
+    setCycles([sampleCycle]);
     setCycle(sampleCycle);
     setTransactions(sampleTx);
   };
@@ -585,10 +738,12 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     // Kembalikan ke mode demo simulasi jika belum login
     if (!user) {
       const sample = createSampleCycle();
+      setCycles([sample]);
       setCycle(sample);
       setTransactions(createSampleTransactions(sample.id));
     } else {
       setCycle(null);
+      setCycles([]);
       setTransactions([]);
     }
   };
@@ -601,6 +756,8 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         isSyncing,
         isInitializing,
         cycle,
+        cycles,
+        isViewingArchived,
         isOnboarded,
         transactions,
         metrics,
@@ -613,6 +770,8 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         bulkDeleteTransactionsByDate,
         updateCycle,
         setupNewCycle,
+        completeCurrentCycle,
+        switchCycle,
         backupData,
         restoreData,
         loadSampleData,
