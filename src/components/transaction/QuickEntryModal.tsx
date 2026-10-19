@@ -88,9 +88,10 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
   const [pasteText, setPasteText] = useState<string>('');
 
   const singleAmountInputRef = useRef<HTMLInputElement>(null);
+  const prevIsOpenRef = useRef(false);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !prevIsOpenRef.current) {
       const today = getTodayDateString();
       setSingleType('EXPENSE');
       setSingleUnitPriceStr('');
@@ -134,6 +135,7 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
         singleAmountInputRef.current?.focus();
       }, 50);
     }
+    prevIsOpenRef.current = isOpen;
   }, [isOpen]);
 
   // Single mode quick preset

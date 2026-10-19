@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { User } from '@supabase/supabase-js';
 import type { BudgetCycle, RunwayMetrics } from '../types/cycle';
@@ -155,13 +155,19 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     };
   }, []);
 
+  const lastSyncRef = useRef<number>(0);
+
   // Auto-sync saat tab aktif kembali (fokus layar / berpindah aplikasi)
   useEffect(() => {
     if (!user) return;
 
     const handleSyncOnVisible = () => {
       if (document.visibilityState === 'visible') {
-        syncFromCloud(user);
+        const now = Date.now();
+        if (now - lastSyncRef.current > 3000) {
+          lastSyncRef.current = now;
+          syncFromCloud(user);
+        }
       }
     };
 
@@ -240,7 +246,15 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           isCompleted: !!row.notes?.includes('[STATUS:COMPLETED]'),
         }));
 
-        setCycles(mappedCycles);
+        setCycles((prevCycles) => {
+          if (
+            prevCycles.length === mappedCycles.length &&
+            prevCycles.every((pc, i) => pc.id === mappedCycles[i]?.id && pc.isCompleted === mappedCycles[i]?.isCompleted)
+          ) {
+            return prevCycles;
+          }
+          return mappedCycles;
+        });
 
         // Gunakan siklus yang cocok jika sudah terpilih, atau siklus pertama (terbaru)
         const targetCycle =
@@ -248,7 +262,22 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             ? mappedCycles.find((c) => c.id === cycle.id)!
             : mappedCycles[0];
 
-        setCycle(targetCycle);
+        setCycle((prevCycle) => {
+          if (!prevCycle) return targetCycle;
+          if (
+            prevCycle.id === targetCycle.id &&
+            prevCycle.userName === targetCycle.userName &&
+            prevCycle.initialBalance === targetCycle.initialBalance &&
+            prevCycle.emergencyBuffer === targetCycle.emergencyBuffer &&
+            prevCycle.startDate === targetCycle.startDate &&
+            prevCycle.endDate === targetCycle.endDate &&
+            prevCycle.isCompleted === targetCycle.isCompleted &&
+            prevCycle.notes === targetCycle.notes
+          ) {
+            return prevCycle;
+          }
+          return targetCycle;
+        });
 
         // 2. Ambil transaksi HANYA untuk siklus yang dipilih
         const { data: cloudTx, error: txErr } = await supabase

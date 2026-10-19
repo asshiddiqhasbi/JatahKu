@@ -22,15 +22,17 @@ export const DateGroupActionsModal: React.FC<DateGroupActionsModalProps> = ({
 }) => {
   const [newDate, setNewDate] = useState<string>(getTodayDateString());
   const [loading, setLoading] = useState<boolean>(false);
+  const prevIsOpenRef = React.useRef(false);
 
   useEffect(() => {
-    if (group && isOpen) {
+    if (group && isOpen && !prevIsOpenRef.current) {
       // Default to yesterday if current group is today, otherwise today
       const today = getTodayDateString();
       const yesterday = getYesterdayDateString();
       setNewDate(group.date === today ? yesterday : today);
       setLoading(false);
     }
+    prevIsOpenRef.current = isOpen;
   }, [group, isOpen]);
 
   if (!group) return null;

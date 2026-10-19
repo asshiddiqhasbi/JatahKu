@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Trash2, Calendar, Shield, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Trash2, Calendar, Shield, ArrowRight } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { useBudget } from '../../context/BudgetContext';
 import { parseRawNumber, formatIDR } from '../../utils/currency';
@@ -28,8 +28,12 @@ export const CycleConfigModal: React.FC<CycleConfigModalProps> = ({
   const [startDate, setStartDate] = useState(cycle?.startDate || '');
   const [endDate, setEndDate] = useState(cycle?.endDate || '');
 
+  const prevIsOpenRef = useRef(false);
+
   useEffect(() => {
-    if (isOpen) {
+    // Only initialize form fields when the modal transitions from closed to open.
+    // This prevents user edits from being wiped out when switching browser tabs or on window focus.
+    if (isOpen && !prevIsOpenRef.current) {
       if (isNewCycle) {
         const today = getTodayDateString();
         const defaultEnd = addDaysToDate(today, 30);
@@ -46,6 +50,7 @@ export const CycleConfigModal: React.FC<CycleConfigModalProps> = ({
         setEndDate(cycle.endDate);
       }
     }
+    prevIsOpenRef.current = isOpen;
   }, [isOpen, cycle, isNewCycle]);
 
   if (!cycle && !isNewCycle) return null;
@@ -115,7 +120,7 @@ export const CycleConfigModal: React.FC<CycleConfigModalProps> = ({
         {/* Carry-over banner if applicable */}
         {isNewCycle && carryOverAmount > 0 && (
           <div className="p-3 bg-[#E8F5E9] dark:bg-[#1A2E22] border border-[#C8E6C9] dark:border-[#2A4736] rounded-xl flex items-center gap-2.5 text-xs text-[#2D6A4F] dark:text-[#76CEA2]">
-            <Sparkles className="w-4 h-4 shrink-0" />
+            <ArrowRight className="w-4 h-4 shrink-0" />
             <span>
               Membawa sisa saldo <strong>{formatIDR(carryOverAmount)}</strong> dari periode lalu sebagai pemasukan awal kas.
             </span>

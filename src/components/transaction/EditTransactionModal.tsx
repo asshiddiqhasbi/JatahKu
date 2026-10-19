@@ -43,8 +43,15 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
 
   const amountInputRef = useRef<HTMLInputElement>(null);
 
+  const prevIsOpenRef = useRef(false);
+  const prevTxIdRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (transaction && isOpen) {
+    const isNewModalOpen = isOpen && !prevIsOpenRef.current;
+    const isDifferentTransaction = transaction && transaction.id !== prevTxIdRef.current;
+
+    if (transaction && isOpen && (isNewModalOpen || isDifferentTransaction)) {
+      prevTxIdRef.current = transaction.id;
       setType(transaction.type);
       const initialUnitPrice =
         transaction.unitPrice && transaction.unitPrice > 0
@@ -63,6 +70,10 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
       setTimeout(() => {
         amountInputRef.current?.focus();
       }, 50);
+    }
+    prevIsOpenRef.current = isOpen;
+    if (!isOpen) {
+      prevTxIdRef.current = null;
     }
   }, [transaction, isOpen]);
 
