@@ -149,7 +149,7 @@ const DashboardContent: React.FC = () => {
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 pt-6 pb-20 sm:py-8 space-y-6">
         {/* 1. Focal Hero: Daily Safe Allowance & Financial Health */}
         <section aria-label="Jatah Harian Utama">
           <RunwayHero
