@@ -242,8 +242,9 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
     );
   };
 
-  const handleApplyDefaultDateToAll = () => {
-    setRows((prev) => prev.map((r) => ({ ...r, date: batchDefaultDate })));
+  const handleBatchDateChange = (newDate: string) => {
+    setBatchDefaultDate(newDate);
+    setRows((prev) => prev.map((r) => ({ ...r, date: newDate })));
   };
 
   const handleExtractPastedText = () => {
@@ -811,8 +812,8 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
-                      onClick={() => setBatchDefaultDate(getTodayDateString())}
-                      className={`px-2 py-1 text-xs font-medium rounded-lg transition-colors ${
+                      onClick={() => handleBatchDateChange(getTodayDateString())}
+                      className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-colors ${
                         batchDefaultDate === getTodayDateString()
                           ? 'bg-[#2D6A4F] text-white font-semibold'
                           : 'bg-[#F4F1EA] dark:bg-[#2C2925] text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
@@ -822,8 +823,8 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                     </button>
                     <button
                       type="button"
-                      onClick={() => setBatchDefaultDate(getYesterdayDateString())}
-                      className={`px-2 py-1 text-xs font-medium rounded-lg transition-colors ${
+                      onClick={() => handleBatchDateChange(getYesterdayDateString())}
+                      className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-colors ${
                         batchDefaultDate === getYesterdayDateString()
                           ? 'bg-[#2D6A4F] text-white font-semibold'
                           : 'bg-[#F4F1EA] dark:bg-[#2C2925] text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
@@ -835,17 +836,9 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                   <input
                     type="date"
                     value={batchDefaultDate}
-                    onChange={(e) => setBatchDefaultDate(e.target.value)}
+                    onChange={(e) => handleBatchDateChange(e.target.value)}
                     className="px-2.5 py-1 text-xs font-mono bg-white dark:bg-[#23211E] border border-[#E7E3DA] dark:border-[#38342F] rounded-lg text-stone-850 dark:text-[#F2EFE9] focus:outline-none focus:border-[#2D6A4F]"
                   />
-                  <button
-                    type="button"
-                    onClick={handleApplyDefaultDateToAll}
-                    title="Terapkan tanggal ini ke semua baris di bawah"
-                    className="text-xs text-[#2D6A4F] dark:text-[#42B07E] hover:underline font-semibold ml-1"
-                  >
-                    Terapkan ke Semua Baris
-                  </button>
                 </div>
 
                 {/* Paste from WA/Notes Toggle */}
@@ -891,19 +884,123 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
               )}
             </div>
 
-            {/* Multi-Row Table Container */}
-            <div className="border border-[#E7E3DA] dark:border-[#38342F] rounded-xl bg-white dark:bg-[#1E1C1A] overflow-hidden">
-              <div className="sm:hidden px-3 pt-2 text-[10px] text-stone-500 dark:text-stone-400 font-medium">
-                Geser tabel ke samping untuk melihat semua kolom →
+            {/* Multi-Row Items Container: Adaptive Mobile Cards vs Desktop Table */}
+            <div className="space-y-3">
+              {/* MOBILE VIEW (< sm): Stacked Cards per Item (No Horizontal Scroll) */}
+              <div className="sm:hidden space-y-2.5">
+                {rows.map((row, index) => {
+                  const unitPrice = parseRawNumber(row.unitPriceStr);
+                  const qty = typeof row.qty === 'number' && row.qty >= 1 ? row.qty : 1;
+                  const rowTotal = unitPrice * qty;
+
+                  return (
+                    <div
+                      key={row.id}
+                      className="p-3 bg-white dark:bg-[#1E1C1A] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl space-y-2.5 shadow-2xs"
+                    >
+                      {/* Top line: # number, Item Name, Delete button */}
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 text-center text-xs font-mono font-bold text-stone-400 dark:text-stone-500 shrink-0">
+                          #{index + 1}
+                        </span>
+                        <input
+                          type="text"
+                          placeholder="Nama barang / keterangan"
+                          value={row.note}
+                          onChange={(e) => handleUpdateRow(row.id, 'note', e.target.value)}
+                          className="flex-1 px-3 py-1.5 text-xs bg-[#FAF8F5] dark:bg-[#282622] border border-[#E7E3DA] dark:border-[#38342F] rounded-lg text-stone-900 dark:text-[#F2EFE9] placeholder-stone-400 dark:placeholder-stone-600 focus:outline-none focus:border-[#2D6A4F]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveRow(row.id)}
+                          disabled={rows.length <= 1}
+                          className="p-1.5 text-stone-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shrink-0"
+                          title="Hapus barang ini"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* Bottom line: Category, Qty, and Price */}
+                      <div className="grid grid-cols-12 gap-2 items-center">
+                        {/* Category */}
+                        <div className="col-span-6">
+                          <select
+                            value={row.category}
+                            onChange={(e) =>
+                              handleUpdateRow(row.id, 'category', e.target.value as TransactionCategory)
+                            }
+                            className="w-full px-2 py-1.5 text-xs bg-[#FAF8F5] dark:bg-[#282622] border border-[#E7E3DA] dark:border-[#38342F] rounded-lg text-stone-800 dark:text-[#F2EFE9] focus:outline-none focus:border-[#2D6A4F]"
+                          >
+                            {TRANSACTION_CATEGORIES.map((cat) => (
+                              <option key={cat.id} value={cat.id}>
+                                {cat.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Qty */}
+                        <div className="col-span-2">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            title="Jumlah item"
+                            value={row.qty}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => handleUpdateRow(row.id, 'qty', e.target.value)}
+                            onBlur={() => {
+                              if (!row.qty || Number(row.qty) < 1) {
+                                handleUpdateRow(row.id, 'qty', 1);
+                              }
+                            }}
+                            className="w-full px-1 py-1.5 text-xs font-mono font-bold text-center bg-[#FAF8F5] dark:bg-[#282622] border border-[#E7E3DA] dark:border-[#38342F] rounded-lg text-stone-900 dark:text-[#F2EFE9] focus:outline-none focus:border-[#2D6A4F]"
+                          />
+                        </div>
+
+                        {/* Unit Price */}
+                        <div className="col-span-4 relative">
+                          <span className="absolute inset-y-0 left-0 pl-2 flex items-center text-stone-400 text-[11px] font-semibold">
+                            Rp
+                          </span>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="0"
+                            value={
+                              row.unitPriceStr
+                                ? parseInt(row.unitPriceStr, 10).toLocaleString('id-ID')
+                                : ''
+                            }
+                            onChange={(e) => handleUpdateRow(row.id, 'unitPriceStr', e.target.value)}
+                            className="w-full pl-6 pr-2 py-1.5 text-xs font-mono font-semibold text-right bg-[#FAF8F5] dark:bg-[#282622] border border-[#E7E3DA] dark:border-[#38342F] rounded-lg text-stone-900 dark:text-[#F2EFE9] placeholder-stone-300 dark:placeholder-stone-700 focus:outline-none focus:border-[#2D6A4F] tabular-nums"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Subtotal row preview if qty > 1 */}
+                      {qty > 1 && unitPrice > 0 && (
+                        <div className="flex items-center justify-between text-[11px] text-stone-500 dark:text-stone-400 pt-1 border-t border-[#EDE9E1] dark:border-[#2C2925]">
+                          <span>{qty} item @ {formatIDR(unitPrice)}</span>
+                          <span className="font-mono font-bold text-[#2D6A4F] dark:text-[#76CEA2]">
+                            Total: {formatIDR(rowTotal)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[800px]">
+
+              {/* DESKTOP VIEW (>= sm): Clean Table without Date column */}
+              <div className="hidden sm:block border border-[#E7E3DA] dark:border-[#38342F] rounded-xl bg-white dark:bg-[#1E1C1A] overflow-hidden">
+                <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-[#EDE9E1] dark:border-[#332F2B] bg-[#F8F6F1] dark:bg-[#24211E] text-[11px] font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider">
                       <th className="py-2.5 px-3 w-8 text-center">#</th>
-                      <th className="py-2.5 px-3 w-32">Tanggal</th>
                       <th className="py-2.5 px-3">Nama Barang / Keterangan</th>
-                      <th className="py-2.5 px-3 w-44">Kategori</th>
+                      <th className="py-2.5 px-3 w-40">Kategori</th>
                       <th className="py-2.5 px-2 w-16 text-center">Jumlah</th>
                       <th className="py-2.5 px-3 w-32 text-right">Harga Satuan</th>
                       <th className="py-2.5 px-3 w-28 text-right">Total</th>
@@ -921,22 +1018,10 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                           key={row.id}
                           className="hover:bg-[#FAF8F5] dark:hover:bg-[#24211E] transition-colors"
                         >
-                          {/* Row Number */}
                           <td className="py-2 px-3 text-center text-xs font-mono text-stone-400 dark:text-stone-500">
                             {index + 1}
                           </td>
 
-                          {/* Date */}
-                          <td className="py-2 px-3">
-                            <input
-                              type="date"
-                              value={row.date}
-                              onChange={(e) => handleUpdateRow(row.id, 'date', e.target.value)}
-                              className="w-full px-2 py-1 text-xs font-mono bg-stone-50 dark:bg-[#282622] border border-[#E7E3DA] dark:border-[#38342F] rounded-lg text-stone-850 dark:text-[#F2EFE9] focus:outline-none focus:border-[#2D6A4F]"
-                            />
-                          </td>
-
-                          {/* Item Name / Note */}
                           <td className="py-2 px-3">
                             <input
                               type="text"
@@ -947,7 +1032,6 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                             />
                           </td>
 
-                          {/* Category */}
                           <td className="py-2 px-3">
                             <select
                               value={row.category}
@@ -958,13 +1042,12 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                             >
                               {TRANSACTION_CATEGORIES.map((cat) => (
                                 <option key={cat.id} value={cat.id}>
-                                  {cat.shortLabel} - {cat.label}
+                                  {cat.label}
                                 </option>
                               ))}
                             </select>
                           </td>
 
-                          {/* Quantity */}
                           <td className="py-2 px-2">
                             <input
                               type="text"
@@ -982,7 +1065,6 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                             />
                           </td>
 
-                          {/* Unit Price */}
                           <td className="py-2 px-3">
                             <div className="relative">
                               <span className="absolute inset-y-0 left-0 pl-2 flex items-center text-stone-400 text-xs font-semibold">
@@ -1003,19 +1085,18 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                             </div>
                           </td>
 
-                          {/* Total (Calculated) */}
                           <td className="py-2 px-3 text-right">
                             <span className="text-xs font-mono font-bold text-[#2D6A4F] dark:text-[#76CEA2] tabular-nums">
                               {rowTotal > 0 ? formatIDR(rowTotal) : 'Rp 0'}
                             </span>
                           </td>
 
-                          {/* Delete Button */}
                           <td className="py-2 px-2 text-center">
                             <button
                               type="button"
                               onClick={() => handleRemoveRow(row.id)}
-                              className="p-1 text-stone-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                              disabled={rows.length <= 1}
+                              className="p-1 text-stone-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                               title="Hapus baris"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -1028,12 +1109,12 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({ isOpen, onClos
                 </table>
               </div>
 
-              {/* Table Footer with Add Row Button */}
-              <div className="p-3 bg-[#FAF8F5] dark:bg-[#24211E] border-t border-[#EDE9E1] dark:border-[#332F2B] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+              {/* Add Row Button and Counter (Shared for both Mobile and Desktop) */}
+              <div className="p-3 bg-[#FAF8F5] dark:bg-[#24211E] border border-[#EDE9E1] dark:border-[#332F2B] rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
                 <button
                   type="button"
                   onClick={handleAddRow}
-                  className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-white dark:bg-[#1E1C1A] hover:bg-[#F2EFE9] dark:hover:bg-[#2C2925] text-stone-700 dark:text-stone-300 border border-[#E7E3DA] dark:border-[#38342F] transition-colors shadow-2xs"
+                  className="flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg bg-white dark:bg-[#1E1C1A] hover:bg-[#F2EFE9] dark:hover:bg-[#2C2925] text-stone-700 dark:text-stone-300 border border-[#E7E3DA] dark:border-[#38342F] transition-colors shadow-2xs active:scale-98"
                 >
                   <Plus className="w-3.5 h-3.5 text-[#2D6A4F] dark:text-[#42B07E]" />
                   <span>Tambah Baris Belanjaan</span>
