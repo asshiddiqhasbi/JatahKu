@@ -73,28 +73,30 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* Period Selector Pill */}
-          <button
-            type="button"
-            onClick={onOpenCycleHistory}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs rounded-xl border transition-all ml-1 sm:ml-2 ${
-              isViewingArchived
-                ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 border-amber-200 dark:border-amber-800'
-                : 'bg-[#F4F1EA] dark:bg-[#23211E] hover:bg-[#ECE8DD] dark:hover:bg-[#2C2925] text-stone-700 dark:text-stone-300 border-[#E7E3DA] dark:border-[#38342F]'
-            }`}
-            title="Kelola & riwayat periode"
-          >
-            {isViewingArchived ? (
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-            ) : (
-              <span className="w-1.5 h-1.5 rounded-full bg-[#2D6A4F] dark:bg-[#42B07E] shrink-0" />
-            )}
-            <span className="font-semibold truncate max-w-[95px] sm:max-w-none">
-              {isViewingArchived ? 'Arsip: ' : ''}
-              {formatShortDate(cycle.startDate)} - {formatShortDate(cycle.endDate)}
-            </span>
-            <ChevronDown className="w-3 h-3 text-stone-400 shrink-0" />
-          </button>
+          {/* Period Selector Pill (Hanya tampil jika pengguna sudah login) */}
+          {user && (
+            <button
+              type="button"
+              onClick={onOpenCycleHistory}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs rounded-xl border transition-all ml-1 sm:ml-2 shrink min-w-0 ${
+                isViewingArchived
+                  ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 border-amber-200 dark:border-amber-800'
+                  : 'bg-[#F4F1EA] dark:bg-[#23211E] hover:bg-[#ECE8DD] dark:hover:bg-[#2C2925] text-stone-700 dark:text-stone-300 border-[#E7E3DA] dark:border-[#38342F]'
+              }`}
+              title="Kelola & riwayat periode"
+            >
+              {isViewingArchived ? (
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+              ) : (
+                <span className="w-1.5 h-1.5 rounded-full bg-[#2D6A4F] dark:bg-[#42B07E] shrink-0" />
+              )}
+              <span className="font-semibold truncate max-w-[85px] sm:max-w-none">
+                {isViewingArchived ? 'Arsip: ' : ''}
+                {formatShortDate(cycle.startDate)} - {formatShortDate(cycle.endDate)}
+              </span>
+              <ChevronDown className="w-3 h-3 text-stone-400 shrink-0" />
+            </button>
+          )}
         </div>
 
         {/* Action Controls */}
