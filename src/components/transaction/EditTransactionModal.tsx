@@ -8,6 +8,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
+import { ConfirmDeleteModal } from '../common/ConfirmDeleteModal';
 import type { Transaction, TransactionCategory, TransactionType } from '../../types/transaction';
 import { TRANSACTION_CATEGORIES } from '../../constants/categories';
 import {
@@ -40,6 +41,8 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
   const [incomeSource, setIncomeSource] = useState<string>('Transfer Ortu');
   const [note, setNote] = useState<string>('');
   const [date, setDate] = useState<string>(getTodayDateString());
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const amountInputRef = useRef<HTMLInputElement>(null);
 
@@ -117,24 +120,30 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
   };
 
   const handleDelete = () => {
-    const confirmed = window.confirm(
-      `Yakin ingin menghapus transaksi "${note || category}" senilai ${formatIDR(transaction.amount)}?`
-    );
-    if (confirmed) {
-      onDelete(transaction.id);
+    setIsConfirmingDelete(true);
+  };
+
+  const handleExecuteDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await onDelete(transaction.id);
+      setIsConfirmingDelete(false);
       onClose();
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Edit Transaksi"
-      subtitle="Perbaiki input harga, jumlah, kategori, atau tanggal"
-      maxWidth="lg"
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Edit Transaksi"
+        subtitle="Perbaiki input harga, jumlah, kategori, atau tanggal"
+        maxWidth="lg"
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
         {/* Transaction Type Segmented Toggle */}
         <div className="grid grid-cols-2 p-1 bg-[#F4F1EA] dark:bg-[#1C1A18] rounded-xl border border-[#EDE9E1] dark:border-[#2C2925]">
           <button
@@ -475,5 +484,18 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
         </div>
       </form>
     </Modal>
+
+    <ConfirmDeleteModal
+      isOpen={isConfirmingDelete}
+      onClose={() => setIsConfirmingDelete(false)}
+      onConfirm={handleExecuteDelete}
+      itemName={note || category}
+      itemCategory={type === 'EXPENSE' ? category : 'Pemasukan'}
+      itemAmount={totalAmount}
+      itemDate={date}
+      isExpense={type === 'EXPENSE'}
+      isLoading={isDeleting}
+    />
+  </>
   );
 };

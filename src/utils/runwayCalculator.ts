@@ -47,10 +47,21 @@ export function calculateRunway(
   const remainingDailyQuotaToday = nominalTodayAllowance - spentToday;
   const safeDailyAllowance = Math.max(0, nominalTodayAllowance);
 
-  const burnRatePercentage =
-    initialDailyBaseline > 0
-      ? Math.round((nominalTodayAllowance / initialDailyBaseline) * 100)
-      : 100;
+  const futureDays = Math.max(1, daysRemaining - 1);
+  const futureDailyAllowance = Math.max(0, effectiveCurrentBalance / futureDays);
+
+  let burnRatePercentage = 100;
+  if (initialDailyBaseline > 0) {
+    if (effectiveCurrentBalance <= 0) {
+      burnRatePercentage = 0;
+    } else if (remainingDailyQuotaToday < 0) {
+      // Jika belanja hari ini telah melampaui jatah harian, ketahanan dihitung dari
+      // jatah hari esok terhadap baseline awal (dibatasi maks 99% agar selaras dengan status peringatan)
+      burnRatePercentage = Math.min(99, Math.round((futureDailyAllowance / initialDailyBaseline) * 100));
+    } else {
+      burnRatePercentage = Math.round((nominalTodayAllowance / initialDailyBaseline) * 100);
+    }
+  }
 
   const averageDailyExpense =
     daysPassed > 0 ? Math.round(totalExpense / daysPassed) : totalExpense;

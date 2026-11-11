@@ -67,21 +67,24 @@ export const RunwayHero: React.FC<RunwayHeroProps> = ({
 
       {/* Alert 2: Periode Telah Selesai (Active cycle expired or finished) */}
       {isCycleExpired && !isViewingArchived && (
-        <div className="mb-5 p-3.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs text-emerald-900 dark:text-emerald-200">
+        <div className="mb-5 p-3.5 bg-[#FAF8F5] dark:bg-[#1E1C1A] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-stone-800 dark:text-[#F2EFE9]">
           <div>
-            <p className="font-bold">Periode Ini Telah Selesai</p>
-            <p className="text-[11px] opacity-90 mt-0.5">
-              Jadwal periode telah berakhir. Selesaikan catatan untuk melihat evaluasi akhir dan mulai periode baru.
+            <p className="font-bold flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+              <span>{cycle.isCompleted ? 'Buku Catatan Periode Ini Telah Ditutup' : 'Jadwal Periode Ini Telah Berakhir'}</span>
+            </p>
+            <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
+              Lihat evaluasi rapor akhir untuk memeriksa sisa saldo kas dan membuka periode belanja baru.
             </p>
           </div>
           {onOpenPeriodSummary && (
             <button
               type="button"
               onClick={onOpenPeriodSummary}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-[#2D6A4F] hover:bg-[#23563F] text-white shadow-2xs transition-colors shrink-0"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-[#2D6A4F] hover:bg-[#23563F] text-white shadow-2xs transition-all active:scale-98 shrink-0"
             >
               <Award className="w-3.5 h-3.5" />
-              <span>Lihat Rapor Akhir</span>
+              <span>Buka Rapor Akhir</span>
             </button>
           )}
         </div>

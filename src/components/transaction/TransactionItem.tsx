@@ -10,13 +10,13 @@ import { getCategoryMeta } from '../../constants/categories';
 
 interface TransactionItemProps {
   transaction: Transaction;
-  onDelete: (id: string) => void;
+  onDeleteRequest: (transaction: Transaction) => void;
   onEdit: (transaction: Transaction) => void;
 }
 
 export const TransactionItem: React.FC<TransactionItemProps> = ({
   transaction,
-  onDelete,
+  onDeleteRequest,
   onEdit,
 }) => {
   const isExpense = transaction.type === 'EXPENSE';
@@ -25,12 +25,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const confirmed = window.confirm(
-      `Yakin ingin menghapus transaksi "${transaction.note || transaction.category}" senilai ${formatIDR(transaction.amount)}?`
-    );
-    if (confirmed) {
-      onDelete(transaction.id);
-    }
+    onDeleteRequest(transaction);
   };
 
   const handleEditClick = (e: React.MouseEvent) => {

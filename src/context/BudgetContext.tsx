@@ -102,6 +102,13 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     return createSampleCycle();
   });
 
+  // Track active cycle ID using a mutable ref to prevent stale closures during cloud syncs / tab refocus
+  const currentCycleIdRef = useRef<string | null>(cycle?.id || null);
+
+  useEffect(() => {
+    currentCycleIdRef.current = cycle?.id || null;
+  }, [cycle?.id]);
+
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     const stored = getStoredTransactions();
     if (stored && stored.length > 0) return stored;
@@ -256,11 +263,14 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           return mappedCycles;
         });
 
-        // Gunakan siklus yang cocok jika sudah terpilih, atau siklus pertama (terbaru)
+        // Prioritaskan ID siklus yang saat ini sedang aktif dibuka pengguna (menggunakan ref agar bebas stale closure)
+        const activeCycleId = currentCycleIdRef.current;
         const targetCycle =
-          cycle && mappedCycles.some((c) => c.id === cycle.id)
-            ? mappedCycles.find((c) => c.id === cycle.id)!
+          activeCycleId && mappedCycles.some((c) => c.id === activeCycleId)
+            ? mappedCycles.find((c) => c.id === activeCycleId)!
             : mappedCycles[0];
+
+        currentCycleIdRef.current = targetCycle.id;
 
         setCycle((prevCycle) => {
           if (!prevCycle) return targetCycle;
@@ -354,8 +364,11 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const isViewingArchived = useMemo(() => {
     if (!cycle) return false;
-    if (cycle.isCompleted) return true;
-    if (cycles.length > 0 && cycle.id !== cycles[0].id) return true;
+    // Mode Arsip HANYA aktif jika ada siklus lain yang lebih baru (cycles[0]),
+    // dan pengguna sedang sengaja membuka riwayat siklus terdahulu (cycle.id !== cycles[0].id).
+    // Jika siklus adalah yang terbaru (meskipun tanggalnya sudah lewat atau sudah ditutup),
+    // statusnya adalah Periode Selesai, BUKAN Mode Arsip.
+    if (cycles.length > 1 && cycle.id !== cycles[0].id) return true;
     return false;
   }, [cycle, cycles]);
 
@@ -543,6 +556,7 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   const setupNewCycle = async (newCycle: BudgetCycle, carryOverAmount?: number) => {
+    currentCycleIdRef.current = newCycle.id;
     setCycle(newCycle);
     setCycles((prev) => [newCycle, ...prev.filter((c) => c.id !== newCycle.id)]);
 
@@ -617,6 +631,7 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       notes: updatedNotes,
     };
 
+    currentCycleIdRef.current = updatedCycle.id;
     setCycle(updatedCycle);
     setCycles((prev) =>
       prev.map((c) => (c.id === updatedCycle.id ? updatedCycle : c))
@@ -643,6 +658,7 @@ export const BudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const target = cycles.find((c) => c.id === cycleId);
     if (!target) return;
 
+    currentCycleIdRef.current = target.id;
     setCycle(target);
 
     if (user) {

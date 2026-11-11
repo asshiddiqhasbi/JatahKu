@@ -14,14 +14,14 @@ export const BurnRateMetrics: React.FC = () => {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-      {/* 1. Sisa Hari */}
+      {/* 1. Progres Periode */}
       <div className="bg-white dark:bg-[#23211E] border border-[#E7E3DA] dark:border-[#38342F] rounded-xl p-4 shadow-2xs flex flex-col justify-between transition-colors">
         <div className="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400 mb-2">
           <span className="font-semibold flex items-center gap-1.5 text-stone-700 dark:text-stone-300">
-            <Calendar className="w-3.5 h-3.5 text-stone-400" />
-            Waktu Tersisa
+            <Calendar className="w-3.5 h-3.5 text-[#2D6A4F] dark:text-[#42B07E]" />
+            Progres Periode
           </span>
-          <span className="font-mono text-stone-400 dark:text-stone-500">{cycleDaysRatio}%</span>
+          <span className="font-mono text-stone-500 dark:text-stone-400 font-semibold">{cycleDaysRatio}%</span>
         </div>
 
         <div>
@@ -31,14 +31,14 @@ export const BurnRateMetrics: React.FC = () => {
             </span>
             <span className="text-xs text-stone-500 dark:text-stone-400">hari lagi</span>
           </div>
-          <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1 truncate">
-            {formatShortDate(cycle.startDate)} s/d {formatShortDate(cycle.endDate)}
+          <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1 truncate" title={`Hari ke-${metrics.daysPassed} dari ${metrics.totalDays} hari`}>
+            Hari ke-{metrics.daysPassed} dari {metrics.totalDays} ({formatShortDate(cycle.startDate)} - {formatShortDate(cycle.endDate)})
           </p>
         </div>
 
         <div className="w-full bg-[#EDE9E1] dark:bg-[#332F2B] h-2 rounded-full overflow-hidden mt-3">
           <div
-            className="bg-stone-400 dark:bg-stone-500 h-full transition-all duration-300"
+            className="bg-[#2D6A4F] dark:bg-[#42B07E] h-full transition-all duration-300"
             style={{ width: `${cycleDaysRatio}%` }}
           />
         </div>

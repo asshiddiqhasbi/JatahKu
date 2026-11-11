@@ -6,6 +6,7 @@ import { TRANSACTION_CATEGORIES } from '../../constants/categories';
 import { TransactionItem } from './TransactionItem';
 import { EditTransactionModal } from './EditTransactionModal';
 import { DateGroupActionsModal } from './DateGroupActionsModal';
+import { ConfirmDeleteModal } from '../common/ConfirmDeleteModal';
 import { formatDisplayDate } from '../../utils/dateUtils';
 import { formatIDR } from '../../utils/currency';
 
@@ -26,7 +27,20 @@ export const TransactionLedger: React.FC<TransactionLedgerProps> = ({ onOpenQuic
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [deletingTx, setDeletingTx] = useState<Transaction | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [managingDateGroup, setManagingDateGroup] = useState<DayGroupedTransactions | null>(null);
+
+  const handleConfirmDelete = async () => {
+    if (!deletingTx) return;
+    setIsDeleting(true);
+    try {
+      await deleteTransaction(deletingTx.id);
+      setDeletingTx(null);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   if (!cycle) return null;
 
@@ -206,7 +220,7 @@ export const TransactionLedger: React.FC<TransactionLedgerProps> = ({ onOpenQuic
                     <TransactionItem
                       key={tx.id}
                       transaction={tx}
-                      onDelete={deleteTransaction}
+                      onDeleteRequest={(item) => setDeletingTx(item)}
                       onEdit={(item) => setEditingTx(item)}
                     />
                   ))}
@@ -233,6 +247,19 @@ export const TransactionLedger: React.FC<TransactionLedgerProps> = ({ onOpenQuic
         onClose={() => setManagingDateGroup(null)}
         onMoveDate={bulkMoveTransactionsDate}
         onDeleteGroup={bulkDeleteTransactionsByDate}
+      />
+
+      {/* Custom Confirmation Modal for Deleting Single Item */}
+      <ConfirmDeleteModal
+        isOpen={!!deletingTx}
+        onClose={() => setDeletingTx(null)}
+        onConfirm={handleConfirmDelete}
+        itemName={deletingTx?.note || ''}
+        itemCategory={deletingTx?.category}
+        itemAmount={deletingTx?.amount}
+        itemDate={deletingTx?.date}
+        isExpense={deletingTx?.type === 'EXPENSE'}
+        isLoading={isDeleting}
       />
     </div>
   );
